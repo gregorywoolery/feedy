@@ -9,14 +9,12 @@ import * as schema from "@/lib/database/schema";
 
 function createDatabaseConnection() {
   const databaseUrl = getDatabaseUrl();
-  const options = getDatabaseConnectionOptions(databaseUrl);
-  const sqlClient = postgres(databaseUrl, {
-    ...options,
-    // Application tables are schema-qualified in Drizzle. Avoid a session
-    // search_path here because Supabase's transaction pooler can reuse the
-    // upstream connection with different session state between requests.
-    connection: { application_name: "feedy" },
-  });
+  const options = { ...getDatabaseConnectionOptions(databaseUrl) };
+  // Application tables are schema-qualified in Drizzle. Supabase's
+  // transaction pooler can reuse upstream sessions between clients, so the
+  // application runtime deliberately sends no session startup parameters.
+  delete options.connection;
+  const sqlClient = postgres(databaseUrl, options);
 
   return {
     sqlClient,
