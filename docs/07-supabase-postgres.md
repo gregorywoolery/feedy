@@ -63,7 +63,7 @@ The seed upserts fixed UUIDs and is repeatable. Avoid it if those example record
 
 ## Connection behavior
 
-The client reads SSL from the URL, disables prepared statements, and uses a default pool size of 10. That makes the same code path usable with local PostgreSQL and pooled Supabase connections. For a serverless deployment, start with `DATABASE_POOL_SIZE=1` and tune `DATABASE_IDLE_TIMEOUT_SECONDS` and `DATABASE_CONNECT_TIMEOUT_SECONDS` as needed.
+The client reads SSL from the URL, disables prepared statements, and uses a default pool size of 10. That makes the same code path usable with local PostgreSQL and pooled Supabase connections. Feedy's dashboard deliberately loads four independent datasets in parallel, so use `DATABASE_POOL_SIZE=5` on Vercel; a single-connection pool can stall that concurrent query group with Supabase's transaction pooler. Tune `DATABASE_IDLE_TIMEOUT_SECONDS` and `DATABASE_CONNECT_TIMEOUT_SECONDS` as needed.
 
 Use a database user that can create the migration tables and application records. Keep the URL server-side; it is not a browser/public Supabase key.
 
