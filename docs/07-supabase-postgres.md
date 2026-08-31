@@ -65,6 +65,8 @@ The seed upserts fixed UUIDs and is repeatable. Avoid it if those example record
 
 The client reads SSL from the URL, disables prepared statements, and uses a default pool size of 10. That makes the same code path usable with local PostgreSQL and pooled Supabase connections. Feedy's dashboard deliberately loads four independent datasets in parallel, so use `DATABASE_POOL_SIZE=5` on Vercel; a single-connection pool can stall that concurrent query group with Supabase's transaction pooler. Tune `DATABASE_IDLE_TIMEOUT_SECONDS` and `DATABASE_CONNECT_TIMEOUT_SECONDS` as needed.
 
+Application SQL schema-qualifies every table (for example, `feedy.projects`) instead of depending on a session `search_path`. This is important with transaction pooling because upstream PostgreSQL sessions can be reused between clients. Migration and seed commands still establish the target search path while applying unqualified checked-in SQL.
+
 Use a database user that can create the migration tables and application records. Keep the URL server-side; it is not a browser/public Supabase key.
 
 ## Photo storage

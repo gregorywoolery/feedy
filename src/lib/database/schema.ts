@@ -4,7 +4,9 @@ import {
   customType,
   index,
   integer,
+  pgSchema,
   pgTable,
+  type PgTableFn,
   text,
   timestamp,
   unique,
@@ -12,6 +14,14 @@ import {
   uuid,
   varchar,
 } from "drizzle-orm/pg-core";
+
+import { getDatabaseSchema } from "@/lib/database/config";
+
+const databaseSchema = getDatabaseSchema();
+const applicationTable =
+  (databaseSchema === "public"
+    ? pgTable
+    : pgSchema(databaseSchema).table) as PgTableFn<string | undefined>;
 
 const bytea = customType<{ data: Buffer }>({
   dataType() {
@@ -28,7 +38,7 @@ const timestamps = {
     .notNull(),
 };
 
-export const projects = pgTable(
+export const projects = applicationTable(
   "projects",
   {
     id: uuid("id").defaultRandom().primaryKey(),
@@ -50,7 +60,7 @@ export const projects = pgTable(
   ],
 );
 
-export const feedbackItems = pgTable(
+export const feedbackItems = applicationTable(
   "feedback_items",
   {
     id: uuid("id").defaultRandom().primaryKey(),
@@ -80,7 +90,7 @@ export const feedbackItems = pgTable(
   ],
 );
 
-export const feedbackPhotos = pgTable(
+export const feedbackPhotos = applicationTable(
   "feedback_photos",
   {
     id: uuid("id").defaultRandom().primaryKey(),
@@ -135,7 +145,7 @@ export const feedbackPhotos = pgTable(
   ],
 );
 
-export const photoObjects = pgTable(
+export const photoObjects = applicationTable(
   "photo_objects",
   {
     key: text("key").primaryKey(),
