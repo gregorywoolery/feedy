@@ -2,7 +2,7 @@
 
 ## Requirements
 
-- Node.js 20 or newer
+- Node.js 22 (the same major used by the Docker and Vercel runtimes)
 - npm
 - PostgreSQL, either through the included Docker service or another compatible server
 - Docker and Docker Compose for the container workflows

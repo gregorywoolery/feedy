@@ -25,7 +25,7 @@ Not implemented yet: sign-in, permissions, record editing, object-bucket storage
 
 ## Quick start: app on the host, PostgreSQL in Docker
 
-Requirements: Node.js 20 or newer, npm, and Docker.
+Requirements: Node.js 22, npm, and Docker. The deployment runtime is pinned to Node.js 22 to match the verified Docker image.
 
 ```bash
 cp .env.example .env
