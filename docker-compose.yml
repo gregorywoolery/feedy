@@ -1,0 +1,44 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-feedy}
+      POSTGRES_USER: ${POSTGRES_USER:-feedy}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-feedy}
+    ports:
+      - "${POSTGRES_PORT:-5433}:5432"
+    volumes:
+      - feedy_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 5s
+    restart: unless-stopped
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: ${DOCKER_DATABASE_URL:-postgresql://${POSTGRES_USER:-feedy}:${POSTGRES_PASSWORD:-feedy}@db:5432/${POSTGRES_DB:-feedy}?sslmode=disable}
+      DATABASE_SCHEMA: ${DATABASE_SCHEMA:-public}
+      STORAGE_DRIVER: ${STORAGE_DRIVER:-local}
+      UPLOAD_DIR: ${UPLOAD_DIR:-/app/data/uploads}
+    ports:
+      - "${APP_PORT:-3000}:3000"
+    volumes:
+      - feedy_uploads:/app/data/uploads
+    depends_on:
+      db:
+        condition: service_healthy
+    init: true
+    restart: unless-stopped
+
+volumes:
+  feedy_pg_data:
+  feedy_uploads:
