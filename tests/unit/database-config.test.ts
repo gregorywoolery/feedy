@@ -102,6 +102,7 @@ describe("database configuration", () => {
         DATABASE_POOL_SIZE: "4",
         DATABASE_IDLE_TIMEOUT_SECONDS: "30",
         DATABASE_CONNECT_TIMEOUT_SECONDS: "15",
+        DATABASE_MAX_LIFETIME_SECONDS: "45",
       },
     );
 
@@ -109,6 +110,7 @@ describe("database configuration", () => {
       max: 4,
       idle_timeout: 30,
       connect_timeout: 15,
+      max_lifetime: 45,
       connection: {
         application_name: "feedy",
         search_path: "public",
@@ -120,6 +122,12 @@ describe("database configuration", () => {
         { DATABASE_POOL_SIZE: "0" },
       ),
     ).toThrow(/DATABASE_POOL_SIZE must be a positive integer/);
+    expect(() =>
+      getDatabaseConnectionOptions(
+        "postgresql://feedy:feedy@localhost:5433/feedy?sslmode=disable",
+        { DATABASE_MAX_LIFETIME_SECONDS: "0" },
+      ),
+    ).toThrow(/DATABASE_MAX_LIFETIME_SECONDS must be a positive integer/);
   });
 
   it("isolates deployments in a validated PostgreSQL schema", () => {

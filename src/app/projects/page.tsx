@@ -73,7 +73,7 @@ export default async function ProjectsPage() {
               </CardContent>
               <CardFooter className="gap-2 border-t pt-4">
                 <Button asChild className="flex-1" variant="outline">
-                  <Link href={`/projects/${project.id}`}>Open project</Link>
+                  <Link href={`/projects/${project.id}`} prefetch={false}>Open project</Link>
                 </Button>
                 <FeedbackSheet
                   defaultProjectId={project.id}

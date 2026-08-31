@@ -389,7 +389,7 @@ export function FeedbackSheet({
             <SheetFooter>
               {created ? (
                 <Button asChild variant="outline">
-                  <Link href={`/feedback/${created.id}`}>View feedback</Link>
+                  <Link href={`/feedback/${created.id}`} prefetch={false}>View feedback</Link>
                 </Button>
               ) : null}
               <Button type="button" onClick={() => handleOpenChange(false)}>

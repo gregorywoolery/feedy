@@ -134,6 +134,7 @@ export function RecentProjects({
               className="min-w-0 flex-1 truncate px-2 py-2 text-sm text-muted-foreground transition-colors group-hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               href={`/projects/${project.id}`}
               onClick={onNavigate}
+              prefetch={false}
               title={project.name}
             >
               {project.name}

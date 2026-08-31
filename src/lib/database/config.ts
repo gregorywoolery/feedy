@@ -6,7 +6,13 @@ export type DatabaseEnvironment = Readonly<
 
 export type DatabaseConnectionOptions = Pick<
   postgres.Options<Record<string, postgres.PostgresType>>,
-  "connect_timeout" | "connection" | "idle_timeout" | "max" | "prepare" | "ssl"
+  | "connect_timeout"
+  | "connection"
+  | "idle_timeout"
+  | "max"
+  | "max_lifetime"
+  | "prepare"
+  | "ssl"
 >;
 
 const DATABASE_SCHEMA_PATTERN = /^[a-z][a-z0-9_]{0,62}$/;
@@ -245,6 +251,11 @@ export function getDatabaseConnectionOptions(
       environment,
       "DATABASE_CONNECT_TIMEOUT_SECONDS",
       10,
+    ),
+    max_lifetime: readPositiveInteger(
+      environment,
+      "DATABASE_MAX_LIFETIME_SECONDS",
+      1_800,
     ),
     prepare: false,
     ssl: resolveSslMode(databaseUrl),

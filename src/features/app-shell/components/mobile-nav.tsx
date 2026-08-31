@@ -45,7 +45,7 @@ export function MobileNav() {
             <div className="mt-auto flex items-start gap-3 rounded-lg border bg-muted/50 p-4 [&_svg]:mt-0.5 [&_svg]:size-4 [&_svg]:shrink-0">
               <Database aria-hidden="true" />
               <div className="flex flex-col gap-1">
-                <p className="text-sm font-medium">Local workspace</p>
+                <p className="text-sm font-medium">Open workspace</p>
                 <p className="text-xs leading-5 text-muted-foreground">
                   No sign-in is required for this version.
                 </p>

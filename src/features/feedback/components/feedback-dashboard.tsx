@@ -912,7 +912,7 @@ export function FeedbackDashboard({
                         <TableCell>
                           <div className="flex justify-end gap-1">
                             <Button asChild size="icon-sm" title="View feedback" variant="ghost">
-                              <Link aria-label={`View feedback for ${item.projectName}, version ${item.projectVersion}`} href={`/feedback/${item.id}`}>
+                              <Link aria-label={`View feedback for ${item.projectName}, version ${item.projectVersion}`} href={`/feedback/${item.id}`} prefetch={false}>
                                 <Eye aria-hidden="true" />
                               </Link>
                             </Button>
@@ -1006,7 +1006,7 @@ export function FeedbackDashboard({
                         </div>
                         <div className="mt-4 grid grid-cols-2 gap-2">
                           <Button asChild size="sm" variant="outline">
-                            <Link href={`/feedback/${item.id}`}>
+                            <Link href={`/feedback/${item.id}`} prefetch={false}>
                               <Eye aria-hidden="true" data-icon="inline-start" />
                               View
                             </Link>

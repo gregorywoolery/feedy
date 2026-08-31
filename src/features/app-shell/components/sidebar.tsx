@@ -25,10 +25,10 @@ export function Sidebar() {
             <Database aria-hidden="true" />
             Workspace
           </span>
-          <Badge variant="secondary">Local</Badge>
+          <Badge variant="secondary">Open</Badge>
         </div>
         <p className="text-xs leading-5 text-muted-foreground">
-          Open access while Feedy is running locally.
+          No sign-in is required for this version.
         </p>
       </div>
     </aside>

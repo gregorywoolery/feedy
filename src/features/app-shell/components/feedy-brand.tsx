@@ -17,6 +17,7 @@ export function FeedyBrand({ className, compact = false }: FeedyBrandProps) {
         className
       )}
       href="/"
+      prefetch={false}
     >
       <span className="grid size-9 place-items-center rounded-lg bg-primary text-primary-foreground shadow-sm [&_svg]:size-5">
         <MessageSquareText aria-hidden="true" />

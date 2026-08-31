@@ -63,7 +63,7 @@ The seed upserts fixed UUIDs and is repeatable. Avoid it if those example record
 
 ## Connection behavior
 
-The client reads SSL from the URL, disables prepared statements, and uses a default pool size of 10. That makes the same code path usable with local PostgreSQL and pooled Supabase connections. Feedy's dashboard deliberately loads four independent datasets in parallel, so use `DATABASE_POOL_SIZE=5` on Vercel; a single-connection pool can stall that concurrent query group with Supabase's transaction pooler. Tune `DATABASE_IDLE_TIMEOUT_SECONDS` and `DATABASE_CONNECT_TIMEOUT_SECONDS` as needed.
+The client reads SSL from the URL, disables prepared statements, and uses a default pool size of 10. That makes the same code path usable with local PostgreSQL and pooled Supabase connections. On Vercel, Feedy creates a transient Postgres.js client for each query or transaction so an abandoned streamed response cannot leave a half-consumed socket in a reusable module-level pool. Use `DATABASE_POOL_SIZE=1` for those transient clients. Long-lived local and Docker runtimes retain one reusable client pool. Tune `DATABASE_IDLE_TIMEOUT_SECONDS` and `DATABASE_CONNECT_TIMEOUT_SECONDS` as needed. Set `DATABASE_MAX_LIFETIME_SECONDS=15` on Vercel as an additional bound on transaction-pool sockets.
 
 Application SQL schema-qualifies every table (for example, `feedy.projects`) and sends no session startup parameters instead of depending on a session `search_path`. This is important with transaction pooling because upstream PostgreSQL sessions can be reused between clients. Migration and seed commands still establish the target search path while applying unqualified checked-in SQL.
 

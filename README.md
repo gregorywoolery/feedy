@@ -83,7 +83,8 @@ The application reads one canonical PostgreSQL URL. Direct URL precedence is `DA
 | `STORAGE_DRIVER` | Photo storage adapter | `local` for persistent disk or `database` for PostgreSQL-backed bytes |
 | `UPLOAD_DIR` | Directory for photo bytes | `./data/uploads` on the host; `/app/data/uploads` in Docker |
 | `STORAGE_URL` | Optional external storage base URL retained for future object-storage integration | Not used by the current local/database adapters |
-| `DATABASE_POOL_SIZE` | Maximum PostgreSQL connections per app process | `10`; use `5` for the current Vercel/Supabase deployment |
+| `DATABASE_POOL_SIZE` | Maximum PostgreSQL connections per client | `10`; use `1` for the transient Vercel/Supabase clients |
+| `DATABASE_MAX_LIFETIME_SECONDS` | Maximum lifetime of a PostgreSQL client connection | `1800`; use a short value such as `15` on serverless deployments |
 | `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_PORT` | Bundled PostgreSQL service | `feedy`, `feedy`, `feedy`, `5433` |
 | `APP_PORT` | Host port for the app container | `3000` |
 

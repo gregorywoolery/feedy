@@ -109,7 +109,7 @@ function FeedbackActions({ item, compact = false }: { item: FeedbackListItem; co
     return (
       <div className="grid grid-cols-2 gap-2 border-t pt-4">
         <Button asChild variant="outline">
-          <Link href={`/feedback/${item.id}`}>
+          <Link href={`/feedback/${item.id}`} prefetch={false}>
             <Eye aria-hidden="true" data-icon="inline-start" />
             View
           </Link>
@@ -136,7 +136,7 @@ function FeedbackActions({ item, compact = false }: { item: FeedbackListItem; co
   return (
     <div className="flex justify-end gap-1">
       <Button asChild size="icon-sm" variant="ghost">
-        <Link aria-label={`View feedback for version ${item.projectVersion}`} href={`/feedback/${item.id}`}>
+        <Link aria-label={`View feedback for version ${item.projectVersion}`} href={`/feedback/${item.id}`} prefetch={false}>
           <Eye aria-hidden="true" />
         </Link>
       </Button>
@@ -196,7 +196,7 @@ export default async function ProjectDetailPage({
       <ProjectAccessTracker project={{ id: project.id, name: project.name }} />
       <header className="flex flex-col gap-5">
         <Button asChild className="-ml-3 w-fit" size="sm" variant="ghost">
-          <Link href="/projects">
+          <Link href="/projects" prefetch={false}>
             <ArrowLeft aria-hidden="true" data-icon="inline-start" />
             Back to projects
           </Link>
@@ -265,7 +265,7 @@ export default async function ProjectDetailPage({
           </div>
           {project.feedbackCount ? (
             <Button asChild className="w-fit" size="sm" variant="outline">
-              <Link href={`/?project=${project.id}`}>Open in all feedback</Link>
+              <Link href={`/?project=${project.id}`} prefetch={false}>Open in all feedback</Link>
             </Button>
           ) : null}
         </div>
@@ -353,7 +353,7 @@ export default async function ProjectDetailPage({
                 <div className="flex gap-2">
                   {feedbackPage.page > 1 ? (
                     <Button asChild className="flex-1 sm:flex-none" size="sm" variant="outline">
-                      <Link href={projectPageHref(project.id, query, feedbackPage.page - 1)}>
+                      <Link href={projectPageHref(project.id, query, feedbackPage.page - 1)} prefetch={false}>
                         <ChevronLeft aria-hidden="true" data-icon="inline-start" />
                         Previous
                       </Link>
@@ -366,7 +366,7 @@ export default async function ProjectDetailPage({
                   )}
                   {feedbackPage.page < feedbackPage.pageCount ? (
                     <Button asChild className="flex-1 sm:flex-none" size="sm" variant="outline">
-                      <Link href={projectPageHref(project.id, query, feedbackPage.page + 1)}>
+                      <Link href={projectPageHref(project.id, query, feedbackPage.page + 1)} prefetch={false}>
                         Next
                         <ChevronRight aria-hidden="true" data-icon="inline-end" />
                       </Link>
@@ -397,7 +397,7 @@ export default async function ProjectDetailPage({
             <EmptyContent>
               {project.feedbackCount ? (
                 <Button asChild variant="outline">
-                  <Link href={`/projects/${project.id}`}>Clear filters</Link>
+                  <Link href={`/projects/${project.id}`} prefetch={false}>Clear filters</Link>
                 </Button>
               ) : (
                 <FeedbackSheet

@@ -23,7 +23,7 @@ export default async function FeedbackDetailPage({ params }: { params: Promise<{
       <header className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
         <div className="flex max-w-3xl flex-col gap-3">
           <Button asChild className="w-fit" size="sm" variant="ghost">
-            <Link href="/">
+            <Link href="/" prefetch={false}>
               <ArrowLeft aria-hidden="true" data-icon="inline-start" />
               Back to feedback
             </Link>

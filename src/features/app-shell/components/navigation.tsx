@@ -56,6 +56,7 @@ export function NavigationLinks({
             href={item.href}
             key={item.href}
             onClick={onNavigate}
+            prefetch={false}
           >
             <Icon aria-hidden="true" />
             <span>{item.label}</span>

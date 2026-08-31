@@ -28,16 +28,20 @@ declare global {
   var __feedyDatabaseConnection__: DatabaseConnection | undefined;
 }
 
-let productionConnection: DatabaseConnection | undefined;
-
 function getConnection(): DatabaseConnection {
-  if (process.env.NODE_ENV !== "production") {
-    globalThis.__feedyDatabaseConnection__ ??= createDatabaseConnection();
-    return globalThis.__feedyDatabaseConnection__;
+  // Vercel can freeze a function after a streamed request is abandoned. A
+  // module-scoped Postgres.js pool would then retain the half-consumed socket
+  // and poison later requests on the same warm instance. Supabase transaction
+  // pooling is designed for transient serverless clients, so create one client
+  // per query/transaction there. Postgres.js closes it through the configured
+  // idle/max-lifetime bounds. Local and long-lived runtimes keep one shared
+  // pool for lower connection overhead.
+  if (process.env.VERCEL) {
+    return createDatabaseConnection();
   }
 
-  productionConnection ??= createDatabaseConnection();
-  return productionConnection;
+  globalThis.__feedyDatabaseConnection__ ??= createDatabaseConnection();
+  return globalThis.__feedyDatabaseConnection__;
 }
 
 export function getDatabaseClient() {
