@@ -29,17 +29,11 @@ declare global {
 }
 
 function getConnection(): DatabaseConnection {
-  // Vercel can freeze a function after a streamed request is abandoned. A
-  // module-scoped Postgres.js pool would then retain the half-consumed socket
-  // and poison later requests on the same warm instance. Supabase transaction
-  // pooling is designed for transient serverless clients, so create one client
-  // per query/transaction there. Postgres.js closes it through the configured
-  // idle/max-lifetime bounds. Local and long-lived runtimes keep one shared
-  // pool for lower connection overhead.
-  if (process.env.VERCEL) {
-    return createDatabaseConnection();
-  }
-
+  // Reuse one bounded pool per warm runtime. Creating a client for every
+  // repository call leaves many independent idle sockets behind and can
+  // exhaust Supabase's shared transaction-pooler limit during image bursts.
+  // Postgres.js still retires idle and old connections using the configured
+  // idle_timeout and max_lifetime values.
   globalThis.__feedyDatabaseConnection__ ??= createDatabaseConnection();
   return globalThis.__feedyDatabaseConnection__;
 }
