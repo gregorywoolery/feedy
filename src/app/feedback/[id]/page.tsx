@@ -1,4 +1,4 @@
-import { ArrowLeft, CalendarDays, Download, Images, Layers3, Trash2 } from "lucide-react";
+import { ArrowLeft, CalendarDays, Download, Images, Layers3, Pencil, Trash2 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -8,6 +8,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LocalDateTime } from "@/components/local-date-time";
 import { getFeedbackById } from "@/data-access/feedback/feedback-repository";
 import { DeleteFeedbackDialog } from "@/features/feedback/components/delete-feedback-dialog";
+import { EditFeedbackSheet } from "@/features/feedback/components/edit-feedback-sheet";
+import { PhotoPreviewDialog, PhotoPreviewOverlay } from "@/features/feedback/components/photo-preview-dialog";
 import { feedbackIdSchema } from "@/lib/validation/feedback";
 
 export const dynamic = "force-dynamic";
@@ -38,6 +40,7 @@ export default async function FeedbackDetailPage({ params }: { params: Promise<{
           </div>
         </div>
         <div className="flex flex-col gap-2 sm:flex-row">
+          <EditFeedbackSheet feedback={feedback} trigger={<Button type="button" variant="outline"><Pencil aria-hidden="true" data-icon="inline-start" />Edit feedback</Button>} />
           <DeleteFeedbackDialog
             ids={[feedback.id]}
             redirectTo={`/?project=${feedback.projectId}`}
@@ -107,7 +110,8 @@ export default async function FeedbackDetailPage({ params }: { params: Promise<{
           <div className="grid gap-4 md:grid-cols-2">
             {feedback.photos.map((photo, index) => (
               <figure className="overflow-hidden rounded-xl border bg-card shadow-sm" key={photo.id}>
-                <div className="relative aspect-[4/3] bg-muted">
+                <PhotoPreviewDialog filename={photo.originalFilename} src={photo.url}>
+                <button aria-label={`View ${photo.originalFilename} full size`} className="relative block aspect-[4/3] w-full bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" type="button">
                   <Image
                     alt={`${feedback.projectName} feedback photo ${index + 1}`}
                     className="object-contain"
@@ -116,7 +120,9 @@ export default async function FeedbackDetailPage({ params }: { params: Promise<{
                     src={photo.url}
                     unoptimized
                   />
-                </div>
+                  <PhotoPreviewOverlay />
+                </button>
+                </PhotoPreviewDialog>
                 <figcaption className="border-t px-4 py-3 text-sm text-muted-foreground">
                   {photo.originalFilename}
                 </figcaption>

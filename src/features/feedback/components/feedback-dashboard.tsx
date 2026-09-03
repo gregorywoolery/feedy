@@ -13,6 +13,7 @@ import {
   Images,
   Loader2,
   MessageSquareText,
+  Pencil,
   Plus,
   Search,
   SlidersHorizontal,
@@ -76,6 +77,7 @@ import { ProjectSheet } from "@/features/projects/components/project-sheet";
 import { cn } from "@/lib/utils";
 
 import { DeleteFeedbackDialog } from "./delete-feedback-dialog";
+import { EditFeedbackSheet } from "./edit-feedback-sheet";
 import { FeedbackSheet } from "./feedback-sheet";
 
 type FeedbackDashboardProps = {
@@ -916,6 +918,7 @@ export function FeedbackDashboard({
                                 <Eye aria-hidden="true" />
                               </Link>
                             </Button>
+                            <EditFeedbackSheet feedback={item} trigger={<Button aria-label={`Edit feedback for ${item.projectName}, version ${item.projectVersion}`} size="icon-sm" title="Edit feedback" type="button" variant="ghost"><Pencil aria-hidden="true" /></Button>} />
                             <Button asChild size="icon-sm" title="Download PDF" variant="ghost">
                               <a
                                 aria-label={`Download PDF for ${item.projectName}, version ${item.projectVersion}`}
@@ -1011,6 +1014,7 @@ export function FeedbackDashboard({
                               View
                             </Link>
                           </Button>
+                          <EditFeedbackSheet feedback={item} trigger={<Button size="sm" type="button" variant="outline"><Pencil aria-hidden="true" data-icon="inline-start" />Edit</Button>} />
                           <DeleteFeedbackDialog
                             ids={[item.id]}
                             trigger={

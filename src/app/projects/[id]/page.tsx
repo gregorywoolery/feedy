@@ -7,6 +7,7 @@ import {
   Eye,
   Images,
   MessageSquarePlus,
+  Pencil,
   Trash2
 } from "lucide-react";
 import Image from "next/image";
@@ -41,6 +42,7 @@ import {
 import type { FeedbackListItem, FeedbackQuery } from "@/entities/contracts/feedback";
 import { ProjectAccessTracker } from "@/features/app-shell/components/recent-projects";
 import { DeleteFeedbackDialog } from "@/features/feedback/components/delete-feedback-dialog";
+import { EditFeedbackSheet } from "@/features/feedback/components/edit-feedback-sheet";
 import { FeedbackSheet } from "@/features/feedback/components/feedback-sheet";
 import { DeleteProjectDialog } from "@/features/projects/components/delete-project-dialog";
 import { ProjectFeedbackToolbar } from "@/features/projects/components/project-feedback-toolbar";
@@ -114,6 +116,7 @@ function FeedbackActions({ item, compact = false }: { item: FeedbackListItem; co
             View
           </Link>
         </Button>
+        <EditFeedbackSheet feedback={item} trigger={<Button type="button" variant="outline"><Pencil aria-hidden="true" data-icon="inline-start" />Edit</Button>} />
         <Button asChild variant="outline">
           <a href={`/api/feedback/${item.id}/export`}>
             <Download aria-hidden="true" data-icon="inline-start" />
@@ -140,6 +143,7 @@ function FeedbackActions({ item, compact = false }: { item: FeedbackListItem; co
           <Eye aria-hidden="true" />
         </Link>
       </Button>
+      <EditFeedbackSheet feedback={item} trigger={<Button aria-label={`Edit feedback for version ${item.projectVersion}`} size="icon-sm" title="Edit feedback" type="button" variant="ghost"><Pencil aria-hidden="true" /></Button>} />
       <DeleteFeedbackDialog
         ids={[item.id]}
         trigger={

@@ -7,6 +7,8 @@ import {
   exportFeedbackSchema,
   feedbackIdSchema,
   parseFeedbackQuery,
+  updateFeedbackFieldsSchema,
+  updateFeedbackPhotoOrderSchema,
 } from "@/lib/validation/feedback";
 import { createProjectSchema } from "@/lib/validation/projects";
 
@@ -127,6 +129,11 @@ describe("project validation", () => {
 });
 
 describe("feedback validation", () => {
+  it("validates feedback edits and a unique mixed photo order", () => {
+    expect(updateFeedbackFieldsSchema.parse({ projectVersion: " v4 ", description: " Updated " })).toEqual({ projectVersion: "v4", description: "Updated" });
+    expect(updateFeedbackPhotoOrderSchema.safeParse([{ kind: "existing", id: PROJECT_ID }, { kind: "new", id: FEEDBACK_ID }]).success).toBe(true);
+    expect(updateFeedbackPhotoOrderSchema.safeParse([{ kind: "existing", id: PROJECT_ID }, { kind: "new", id: PROJECT_ID }]).success).toBe(false);
+  });
   it("accepts a valid feedback record and trims its text fields", () => {
     expect(
       createFeedbackFieldsSchema.parse({

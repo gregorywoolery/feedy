@@ -42,6 +42,7 @@ import {
   MAX_PHOTO_COUNT,
   MAX_TOTAL_PHOTO_BYTES
 } from "@/lib/validation/photo-limits";
+import { PhotoPreviewDialog, PhotoPreviewOverlay } from "./photo-preview-dialog";
 
 type Stage = "form" | "review" | "success";
 type PhotoPreview = { id: string; file: File; url: string };
@@ -292,9 +293,12 @@ export function FeedbackSheet({
                     <div className="grid grid-cols-2 gap-3" aria-label="Selected photos">
                       {photos.map((photo, index) => (
                         <div className="overflow-hidden rounded-lg border bg-card" key={photo.id}>
-                          <div className="relative aspect-[4/3] bg-muted">
-                            <Image alt={`Selected photo ${index + 1}`} fill sizes="240px" src={photo.url} unoptimized className="object-cover" />
-                          </div>
+                          <PhotoPreviewDialog filename={photo.file.name} src={photo.url}>
+                            <button aria-label={`View ${photo.file.name} full size`} className="relative block aspect-[4/3] w-full bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" type="button">
+                              <Image alt={`Selected photo ${index + 1}`} fill sizes="240px" src={photo.url} unoptimized className="object-cover" />
+                              <PhotoPreviewOverlay />
+                            </button>
+                          </PhotoPreviewDialog>
                           <div className="flex items-center justify-between gap-2 p-2.5">
                             <p className="min-w-0 truncate text-xs text-muted-foreground" title={photo.file.name}>
                               {photo.file.name}
@@ -350,9 +354,12 @@ export function FeedbackSheet({
               {photos.length ? (
                 <div className="mt-5 grid grid-cols-3 gap-3">
                   {photos.map((photo, index) => (
-                    <div className="relative aspect-square overflow-hidden rounded-lg border bg-muted" key={photo.id}>
-                      <Image alt={`Photo ${index + 1} of ${photos.length}`} fill sizes="160px" src={photo.url} unoptimized className="object-cover" />
-                    </div>
+                    <PhotoPreviewDialog filename={photo.file.name} key={photo.id} src={photo.url}>
+                      <button aria-label={`View ${photo.file.name} full size`} className="relative aspect-square overflow-hidden rounded-lg border bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" type="button">
+                        <Image alt={`Photo ${index + 1} of ${photos.length}`} fill sizes="160px" src={photo.url} unoptimized className="object-cover" />
+                        <PhotoPreviewOverlay />
+                      </button>
+                    </PhotoPreviewDialog>
                   ))}
                 </div>
               ) : null}

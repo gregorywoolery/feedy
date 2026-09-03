@@ -88,6 +88,10 @@ async function createFeedback(
     });
     await expect(sheet.getByAltText("Selected photo 1")).toBeVisible();
     await expect(sheet.getByText("workflow-evidence.png")).toBeVisible();
+    await sheet.getByRole("button", { name: "View workflow-evidence.png full size" }).click();
+    await expect(page.getByRole("heading", { name: "workflow-evidence.png" })).toBeVisible();
+    await expect(page.getByRole("img", { name: "workflow-evidence.png" })).toBeVisible();
+    await page.getByRole("button", { name: "Close" }).click();
   }
 
   await sheet.getByRole("button", { name: "Review feedback" }).click();
@@ -155,10 +159,10 @@ test("creates, filters, exports, and deletes project feedback through side sheet
   const searchToken = `workflow-${token}`;
   const projectName = `E2E project ${token}`;
   const projectDescription = `Project created by ${searchToken}`;
-  const photoVersion = `photo-${token}`;
+  let photoVersion = `photo-${token}`;
   const plainVersion = `plain-${token}`;
   const deleteVersion = `delete-${token}`;
-  const photoDescription = `${searchToken} feedback with visual evidence`;
+  let photoDescription = `${searchToken} feedback with visual evidence`;
   const plainDescription = `${searchToken} feedback without an attachment`;
   const deleteDescription = `${searchToken} feedback created for single deletion`;
 
@@ -187,6 +191,24 @@ test("creates, filters, exports, and deletes project feedback through side sheet
     projectName,
     projectVersion: deleteVersion
   });
+
+  await page.goto(`/feedback/${withPhoto.id}`);
+  await expect(page.getByRole("heading", { name: projectName })).toBeVisible();
+  await page.getByRole("button", { name: "Edit feedback" }).click();
+  const editSheet = page.getByRole("dialog", { name: "Edit feedback" });
+  photoVersion = `edited-${token}`;
+  photoDescription = `${searchToken} edited feedback with visual evidence`;
+  await editSheet.getByLabel("Project version").fill(photoVersion);
+  await editSheet.getByLabel("Description").fill(photoDescription);
+  await editSheet.getByRole("button", { name: "View workflow-evidence.png full size" }).click();
+  await expect(page.getByRole("heading", { name: "workflow-evidence.png" })).toBeVisible();
+  await page.getByRole("button", { name: "Close" }).click();
+  const updateResponsePromise = page.waitForResponse(responseIs(`/api/feedback/${withPhoto.id}`, "PATCH"));
+  await editSheet.getByRole("button", { name: "Save changes" }).click();
+  expect((await updateResponsePromise).ok()).toBeTruthy();
+  await expect(page.getByText(photoDescription, { exact: true })).toBeVisible();
+  await expect(page.getByText(`Feedback for version ${photoVersion}`)).toBeVisible();
+  await page.goto("/");
 
   await page.getByRole("searchbox", { name: "Search feedback" }).fill(searchToken);
   await expect.poll(() => new URL(page.url()).searchParams.get("q")).toBe(searchToken);

@@ -26,7 +26,7 @@ import { db } from "@/lib/database/client";
 import { feedbackItems, feedbackPhotos, projects } from "@/lib/database/schema";
 import type { ValidatedPhoto } from "@/lib/validation/photos";
 
-interface StoredPhotoInput extends ValidatedPhoto {
+export interface StoredPhotoInput extends ValidatedPhoto {
   storageKey: string;
   sortOrder: number;
 }
@@ -306,6 +306,52 @@ export async function createFeedbackRecord(input: {
       );
     }
     return feedback.id;
+  });
+}
+
+export class FeedbackPhotoStateError extends Error {}
+
+export async function updateFeedbackRecord(input: {
+  feedbackId: string;
+  projectVersion: string;
+  description: string;
+  retainedPhotos: Array<{ id: string; sortOrder: number }>;
+  newPhotos: StoredPhotoInput[];
+}) {
+  return db.transaction(async (transaction) => {
+    const current = await transaction.select({ id: feedbackPhotos.id, storageKey: feedbackPhotos.storageKey })
+      .from(feedbackPhotos).where(eq(feedbackPhotos.feedbackId, input.feedbackId));
+    const currentIds = new Set(current.map((photo) => photo.id));
+    if (input.retainedPhotos.some((photo) => !currentIds.has(photo.id))) {
+      throw new FeedbackPhotoStateError("The attached photos changed. Refresh and try again.");
+    }
+    const [updated] = await transaction.update(feedbackItems).set({
+      projectVersion: input.projectVersion,
+      description: input.description,
+      updatedAt: new Date()
+    }).where(eq(feedbackItems.id, input.feedbackId)).returning({ id: feedbackItems.id });
+    if (!updated) return null;
+
+    if (current.length) {
+      await transaction.update(feedbackPhotos)
+        .set({ sortOrder: sql`${feedbackPhotos.sortOrder} + 1000` })
+        .where(eq(feedbackPhotos.feedbackId, input.feedbackId));
+    }
+    const retainedIds = new Set(input.retainedPhotos.map((photo) => photo.id));
+    const removed = current.filter((photo) => !retainedIds.has(photo.id));
+    if (removed.length) await transaction.delete(feedbackPhotos).where(inArray(feedbackPhotos.id, removed.map((photo) => photo.id)));
+    for (const photo of input.retainedPhotos) {
+      await transaction.update(feedbackPhotos).set({ sortOrder: photo.sortOrder })
+        .where(and(eq(feedbackPhotos.id, photo.id), eq(feedbackPhotos.feedbackId, input.feedbackId)));
+    }
+    if (input.newPhotos.length) {
+      await transaction.insert(feedbackPhotos).values(input.newPhotos.map((photo) => ({
+        feedbackId: input.feedbackId, storageKey: photo.storageKey, originalFilename: photo.originalFilename,
+        mimeType: photo.mimeType, sizeBytes: photo.sizeBytes, width: photo.width, height: photo.height,
+        sortOrder: photo.sortOrder
+      })));
+    }
+    return { removedStorageKeys: removed.map((photo) => photo.storageKey) };
   });
 }
 

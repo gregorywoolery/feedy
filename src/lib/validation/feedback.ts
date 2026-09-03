@@ -1,20 +1,30 @@
 import { z } from "zod";
 
 import type { FeedbackQuery } from "@/entities/contracts/feedback";
+import { MAX_PHOTO_COUNT } from "@/lib/validation/photo-limits";
+
+const feedbackTextFields = {
+  projectVersion: z.string().trim().min(1, "Enter the project version you reviewed.").max(80, "Project versions must be 80 characters or fewer."),
+  description: z.string().trim().min(1, "Describe the feedback.").max(10000, "Feedback descriptions must be 10,000 characters or fewer.")
+};
 
 export const createFeedbackFieldsSchema = z.object({
   projectId: z.string().uuid("Choose a valid project."),
-  projectVersion: z
-    .string()
-    .trim()
-    .min(1, "Enter the project version you reviewed.")
-    .max(80, "Project versions must be 80 characters or fewer."),
-  description: z
-    .string()
-    .trim()
-    .min(1, "Describe the feedback.")
-    .max(10000, "Feedback descriptions must be 10,000 characters or fewer.")
+  ...feedbackTextFields
 });
+
+export const updateFeedbackFieldsSchema = z.object(feedbackTextFields);
+export const updateFeedbackPhotoOrderSchema = z
+  .array(z.discriminatedUnion("kind", [
+    z.object({ kind: z.literal("existing"), id: z.string().uuid() }),
+    z.object({ kind: z.literal("new"), id: z.string().uuid() })
+  ]))
+  .max(MAX_PHOTO_COUNT)
+  .superRefine((items, context) => {
+    if (new Set(items.map((item) => item.id)).size !== items.length) {
+      context.addIssue({ code: "custom", message: "Duplicate photos are not allowed." });
+    }
+  });
 
 export const feedbackIdSchema = z.string().uuid();
 
