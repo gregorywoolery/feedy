@@ -6,6 +6,7 @@ Run the complete non-browser verification set before merging:
 
 ```bash
 npm run lint
+npm run format:check
 npm run typecheck
 npm test
 npm run build
@@ -26,6 +27,10 @@ Vitest discovers `tests/unit/**/*.test.ts` and `tests/unit/**/*.test.tsx`, uses 
 - PDF metadata, content, filenames, record ordering, and photo ordering
 - App-shell navigation, sheet accessibility, and mobile navigation controls
 
+Database integration checks use a separate, migrated local database. Set `TEST_DATABASE_URL` to its PostgreSQL URL, then run `npm run test:integration`. These tests cover transaction rollback, concurrent photo edits, persistent cleanup retries, and maintenance with a custom schema loaded from `.env`.
+
+Run `npm run check:secrets` to check all reachable Git history for common credential patterns and personal home-directory paths. This is a preventive check, not a guarantee that every possible secret is detected.
+
 ## Playwright
 
 The Playwright configuration runs both Desktop Chrome and a Pixel 7-style mobile Chrome project. By default it starts the development server at `http://127.0.0.1:3911`, reusing an existing server outside CI. Set `PLAYWRIGHT_PORT` to choose another local port, or set `PLAYWRIGHT_BASE_URL` to test an already-running build without starting a second server.
@@ -41,7 +46,7 @@ npm run test:e2e
 
 The parent environment is inherited by the Playwright web server, so ensure `DATABASE_URL`, `STORAGE_DRIVER`, and `UPLOAD_DIR` point to test-safe resources. Browser tests create records; do not point them at production data.
 
-The primary workflow test creates a project through its three-stage side sheet, creates feedback with and without a photo, searches and filters global and project views, verifies browser-local time rendering, validates single/selected/filtered PDF downloads, and exercises single feedback, bulk feedback, and project deletion. A second test covers recent projects and persistent pinning. Both run in desktop and mobile projects, create uniquely named data, and remove their projects before completion.
+The primary workflow test creates a project through its three-stage side sheet, creates feedback with and without a photo, searches and filters global and project views, verifies browser-local time rendering, validates single/selected/filtered PDF downloads, and exercises single feedback, bulk feedback, and project deletion. A second test covers recent projects and persistent pinning. Both run sequentially in desktop and mobile projects to respect the shared export capacity, create uniquely named data, and remove their projects before completion.
 
 Playwright records a trace on the first retry in CI and screenshots failures. Reports and test results are ignored by Git.
 

@@ -1,14 +1,13 @@
+import { ProjectFeedbackActions } from "@/features/projects/components/project-feedback-actions";
+import { getProjectDetail } from "@/server/application";
 import {
   ArrowLeft,
   CalendarDays,
   ChevronLeft,
   ChevronRight,
-  Download,
-  Eye,
   Images,
   MessageSquarePlus,
-  Pencil,
-  Trash2
+  Trash2,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -24,7 +23,7 @@ import {
   EmptyDescription,
   EmptyHeader,
   EmptyMedia,
-  EmptyTitle
+  EmptyTitle,
 } from "@/components/ui/empty";
 import {
   Table,
@@ -32,25 +31,28 @@ import {
   TableCell,
   TableHead,
   TableHeader,
-  TableRow
+  TableRow,
 } from "@/components/ui/table";
-import { listFeedback, listFeedbackVersions } from "@/data-access/feedback/feedback-repository";
-import {
-  getProjectById,
-  listProjectOptions
-} from "@/data-access/projects/project-repository";
-import type { FeedbackListItem, FeedbackQuery } from "@/entities/contracts/feedback";
+import type {
+  FeedbackListItem,
+  FeedbackQuery,
+} from "@/entities/contracts/feedback";
 import { ProjectAccessTracker } from "@/features/app-shell/components/recent-projects";
-import { DeleteFeedbackDialog } from "@/features/feedback/components/delete-feedback-dialog";
-import { EditFeedbackSheet } from "@/features/feedback/components/edit-feedback-sheet";
 import { FeedbackSheet } from "@/features/feedback/components/feedback-sheet";
 import { DeleteProjectDialog } from "@/features/projects/components/delete-project-dialog";
 import { ProjectFeedbackToolbar } from "@/features/projects/components/project-feedback-toolbar";
-import { feedbackIdSchema, parseFeedbackQuery } from "@/lib/validation/feedback";
+import {
+  feedbackIdSchema,
+  parseFeedbackQuery,
+} from "@/lib/validation/feedback";
 
 export const dynamic = "force-dynamic";
 
-function projectPageHref(projectId: string, query: FeedbackQuery, page: number) {
+function projectPageHref(
+  projectId: string,
+  query: FeedbackQuery,
+  page: number,
+) {
   const params = new URLSearchParams();
   if (query.q) params.set("q", query.q);
   if (query.version) params.set("version", query.version);
@@ -64,7 +66,13 @@ function projectPageHref(projectId: string, query: FeedbackQuery, page: number) 
   return suffix ? `/projects/${projectId}?${suffix}` : `/projects/${projectId}`;
 }
 
-function PhotoPreviews({ item, large = false }: { item: FeedbackListItem; large?: boolean }) {
+function PhotoPreviews({
+  item,
+  large = false,
+}: {
+  item: FeedbackListItem;
+  large?: boolean;
+}) {
   if (!item.photoCount) {
     return <span className="text-sm text-muted-foreground">No photos</span>;
   }
@@ -106,94 +114,32 @@ function PhotoPreviews({ item, large = false }: { item: FeedbackListItem; large?
   );
 }
 
-function FeedbackActions({ item, compact = false }: { item: FeedbackListItem; compact?: boolean }) {
-  if (compact) {
-    return (
-      <div className="grid grid-cols-2 gap-2 border-t pt-4">
-        <Button asChild variant="outline">
-          <Link href={`/feedback/${item.id}`} prefetch={false}>
-            <Eye aria-hidden="true" data-icon="inline-start" />
-            View
-          </Link>
-        </Button>
-        <EditFeedbackSheet feedback={item} trigger={<Button type="button" variant="outline"><Pencil aria-hidden="true" data-icon="inline-start" />Edit</Button>} />
-        <Button asChild variant="outline">
-          <a href={`/api/feedback/${item.id}/export`}>
-            <Download aria-hidden="true" data-icon="inline-start" />
-            PDF
-          </a>
-        </Button>
-        <DeleteFeedbackDialog
-          ids={[item.id]}
-          trigger={
-            <Button className="col-span-2" type="button" variant="outline">
-              <Trash2 aria-hidden="true" data-icon="inline-start" />
-              Delete
-            </Button>
-          }
-        />
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex justify-end gap-1">
-      <Button asChild size="icon-sm" variant="ghost">
-        <Link aria-label={`View feedback for version ${item.projectVersion}`} href={`/feedback/${item.id}`} prefetch={false}>
-          <Eye aria-hidden="true" />
-        </Link>
-      </Button>
-      <EditFeedbackSheet feedback={item} trigger={<Button aria-label={`Edit feedback for version ${item.projectVersion}`} size="icon-sm" title="Edit feedback" type="button" variant="ghost"><Pencil aria-hidden="true" /></Button>} />
-      <DeleteFeedbackDialog
-        ids={[item.id]}
-        trigger={
-          <Button
-            aria-label={`Delete feedback for version ${item.projectVersion}`}
-            size="icon-sm"
-            title="Delete feedback"
-            type="button"
-            variant="ghost"
-          >
-            <Trash2 aria-hidden="true" />
-          </Button>
-        }
-      />
-      <Button asChild size="icon-sm" variant="ghost">
-        <a
-          aria-label={`Download PDF for version ${item.projectVersion}`}
-          href={`/api/feedback/${item.id}/export`}
-        >
-          <Download aria-hidden="true" />
-        </a>
-      </Button>
-    </div>
-  );
-}
-
 export default async function ProjectDetailPage({
   params,
-  searchParams
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const [{ id }, resolvedSearchParams] = await Promise.all([params, searchParams]);
+  const [{ id }, resolvedSearchParams] = await Promise.all([
+    params,
+    searchParams,
+  ]);
   if (!feedbackIdSchema.safeParse(id).success) notFound();
 
   const parsedQuery = parseFeedbackQuery(resolvedSearchParams);
   const query: FeedbackQuery = { ...parsedQuery, project: id, pageSize: 25 };
-  const [project, feedbackPage, projectOptions, versions] = await Promise.all([
-    getProjectById(id),
-    listFeedback(query),
-    listProjectOptions(),
-    listFeedbackVersions(id)
-  ]);
+  const { project, feedbackPage, projectOptions, versions } =
+    await getProjectDetail(id, query);
   if (!project) notFound();
 
   const firstItem = feedbackPage.total
     ? (feedbackPage.page - 1) * feedbackPage.pageSize + 1
     : 0;
-  const lastItem = Math.min(feedbackPage.page * feedbackPage.pageSize, feedbackPage.total);
+  const lastItem = Math.min(
+    feedbackPage.page * feedbackPage.pageSize,
+    feedbackPage.total,
+  );
 
   return (
     <div className="flex flex-col gap-7">
@@ -213,7 +159,8 @@ export default async function ProjectDetailPage({
                 {project.name}
               </h1>
               <Badge className="shrink-0 tabular-nums" variant="secondary">
-                {project.feedbackCount} {project.feedbackCount === 1 ? "item" : "items"}
+                {project.feedbackCount}{" "}
+                {project.feedbackCount === 1 ? "item" : "items"}
               </Badge>
             </div>
             <p className="max-w-2xl whitespace-pre-wrap text-sm leading-6 text-muted-foreground">
@@ -223,7 +170,10 @@ export default async function ProjectDetailPage({
               <span className="inline-flex items-center gap-2">
                 <CalendarDays aria-hidden="true" className="size-4" />
                 {project.lastActivityAt ? (
-                  <LocalDateTime prefix="Last activity " value={project.lastActivityAt} />
+                  <LocalDateTime
+                    prefix="Last activity "
+                    value={project.lastActivityAt}
+                  />
                 ) : (
                   "No feedback activity yet"
                 )}
@@ -237,7 +187,11 @@ export default async function ProjectDetailPage({
               projectId={project.id}
               projectName={project.name}
               trigger={
-                <Button className="w-full sm:w-auto" type="button" variant="outline">
+                <Button
+                  className="w-full sm:w-auto"
+                  type="button"
+                  variant="outline"
+                >
                   <Trash2 aria-hidden="true" data-icon="inline-start" />
                   Delete project
                 </Button>
@@ -248,7 +202,10 @@ export default async function ProjectDetailPage({
               projects={projectOptions}
               trigger={
                 <Button className="w-full sm:w-auto">
-                  <MessageSquarePlus aria-hidden="true" data-icon="inline-start" />
+                  <MessageSquarePlus
+                    aria-hidden="true"
+                    data-icon="inline-start"
+                  />
                   Add feedback
                 </Button>
               }
@@ -257,10 +214,16 @@ export default async function ProjectDetailPage({
         </div>
       </header>
 
-      <section aria-labelledby="project-feedback-title" className="flex flex-col gap-4">
+      <section
+        aria-labelledby="project-feedback-title"
+        className="flex flex-col gap-4"
+      >
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div className="flex flex-col gap-1">
-            <h2 className="text-xl font-semibold tracking-tight" id="project-feedback-title">
+            <h2
+              className="text-xl font-semibold tracking-tight"
+              id="project-feedback-title"
+            >
               Feedback
             </h2>
             <p className="text-sm text-muted-foreground">
@@ -269,13 +232,19 @@ export default async function ProjectDetailPage({
           </div>
           {project.feedbackCount ? (
             <Button asChild className="w-fit" size="sm" variant="outline">
-              <Link href={`/?project=${project.id}`} prefetch={false}>Open in all feedback</Link>
+              <Link href={`/?project=${project.id}`} prefetch={false}>
+                Open in all feedback
+              </Link>
             </Button>
           ) : null}
         </div>
 
         {project.feedbackCount ? (
-          <ProjectFeedbackToolbar query={query} total={feedbackPage.total} versions={versions} />
+          <ProjectFeedbackToolbar
+            query={query}
+            total={feedbackPage.total}
+            versions={versions}
+          />
         ) : null}
 
         {feedbackPage.items.length ? (
@@ -288,13 +257,17 @@ export default async function ProjectDetailPage({
                     <TableHead>Feedback</TableHead>
                     <TableHead className="w-[10rem]">Photos</TableHead>
                     <TableHead className="w-[13rem]">Created</TableHead>
-                    <TableHead className="w-[8.5rem] text-right">Actions</TableHead>
+                    <TableHead className="w-[8.5rem] text-right">
+                      Actions
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {feedbackPage.items.map((item) => (
                     <TableRow key={item.id}>
-                      <TableCell className="font-medium">{item.projectVersion}</TableCell>
+                      <TableCell className="font-medium">
+                        {item.projectVersion}
+                      </TableCell>
                       <TableCell>
                         <p
                           className="line-clamp-2 max-w-2xl whitespace-pre-wrap leading-6 text-foreground"
@@ -310,7 +283,7 @@ export default async function ProjectDetailPage({
                         <LocalDateTime value={item.createdAt} />
                       </TableCell>
                       <TableCell>
-                        <FeedbackActions item={item} />
+                        <ProjectFeedbackActions item={item} />
                       </TableCell>
                     </TableRow>
                   ))}
@@ -340,7 +313,7 @@ export default async function ProjectDetailPage({
                       <CalendarDays aria-hidden="true" className="size-3.5" />
                       <LocalDateTime value={item.createdAt} />
                     </div>
-                    <FeedbackActions compact item={item} />
+                    <ProjectFeedbackActions compact item={item} />
                   </CardContent>
                 </Card>
               ))}
@@ -356,27 +329,70 @@ export default async function ProjectDetailPage({
                 </p>
                 <div className="flex gap-2">
                   {feedbackPage.page > 1 ? (
-                    <Button asChild className="flex-1 sm:flex-none" size="sm" variant="outline">
-                      <Link href={projectPageHref(project.id, query, feedbackPage.page - 1)} prefetch={false}>
-                        <ChevronLeft aria-hidden="true" data-icon="inline-start" />
+                    <Button
+                      asChild
+                      className="flex-1 sm:flex-none"
+                      size="sm"
+                      variant="outline"
+                    >
+                      <Link
+                        href={projectPageHref(
+                          project.id,
+                          query,
+                          feedbackPage.page - 1,
+                        )}
+                        prefetch={false}
+                      >
+                        <ChevronLeft
+                          aria-hidden="true"
+                          data-icon="inline-start"
+                        />
                         Previous
                       </Link>
                     </Button>
                   ) : (
-                    <Button className="flex-1 sm:flex-none" disabled size="sm" variant="outline">
-                      <ChevronLeft aria-hidden="true" data-icon="inline-start" />
+                    <Button
+                      className="flex-1 sm:flex-none"
+                      disabled
+                      size="sm"
+                      variant="outline"
+                    >
+                      <ChevronLeft
+                        aria-hidden="true"
+                        data-icon="inline-start"
+                      />
                       Previous
                     </Button>
                   )}
                   {feedbackPage.page < feedbackPage.pageCount ? (
-                    <Button asChild className="flex-1 sm:flex-none" size="sm" variant="outline">
-                      <Link href={projectPageHref(project.id, query, feedbackPage.page + 1)} prefetch={false}>
+                    <Button
+                      asChild
+                      className="flex-1 sm:flex-none"
+                      size="sm"
+                      variant="outline"
+                    >
+                      <Link
+                        href={projectPageHref(
+                          project.id,
+                          query,
+                          feedbackPage.page + 1,
+                        )}
+                        prefetch={false}
+                      >
                         Next
-                        <ChevronRight aria-hidden="true" data-icon="inline-end" />
+                        <ChevronRight
+                          aria-hidden="true"
+                          data-icon="inline-end"
+                        />
                       </Link>
                     </Button>
                   ) : (
-                    <Button className="flex-1 sm:flex-none" disabled size="sm" variant="outline">
+                    <Button
+                      className="flex-1 sm:flex-none"
+                      disabled
+                      size="sm"
+                      variant="outline"
+                    >
                       Next
                       <ChevronRight aria-hidden="true" data-icon="inline-end" />
                     </Button>
@@ -391,7 +407,11 @@ export default async function ProjectDetailPage({
               <EmptyMedia variant="icon">
                 <Images aria-hidden="true" />
               </EmptyMedia>
-              <EmptyTitle>{project.feedbackCount ? "No matching feedback" : "No feedback yet"}</EmptyTitle>
+              <EmptyTitle>
+                {project.feedbackCount
+                  ? "No matching feedback"
+                  : "No feedback yet"}
+              </EmptyTitle>
               <EmptyDescription>
                 {project.feedbackCount
                   ? "Try a broader search or clear the active filters."
@@ -401,7 +421,9 @@ export default async function ProjectDetailPage({
             <EmptyContent>
               {project.feedbackCount ? (
                 <Button asChild variant="outline">
-                  <Link href={`/projects/${project.id}`} prefetch={false}>Clear filters</Link>
+                  <Link href={`/projects/${project.id}`} prefetch={false}>
+                    Clear filters
+                  </Link>
                 </Button>
               ) : (
                 <FeedbackSheet
@@ -409,7 +431,10 @@ export default async function ProjectDetailPage({
                   projects={projectOptions}
                   trigger={
                     <Button>
-                      <MessageSquarePlus aria-hidden="true" data-icon="inline-start" />
+                      <MessageSquarePlus
+                        aria-hidden="true"
+                        data-icon="inline-start"
+                      />
                       Add feedback
                     </Button>
                   }

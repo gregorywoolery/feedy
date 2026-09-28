@@ -24,7 +24,10 @@ async function main() {
     await sqlClient.unsafe(`create schema if not exists "${databaseSchema}"`);
     await migrate(drizzle(sqlClient), {
       migrationsFolder: path.join(process.cwd(), "drizzle"),
-      migrationsSchema: databaseSchema === "public" ? "drizzle" : `${databaseSchema}_migrations`,
+      migrationsSchema:
+        databaseSchema === "public"
+          ? "drizzle"
+          : `${databaseSchema}_migrations`,
     });
     console.log("Database migrations complete.");
   } finally {

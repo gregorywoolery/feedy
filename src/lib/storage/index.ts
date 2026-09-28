@@ -5,8 +5,7 @@ import type { PhotoStorage } from "@/lib/storage/types";
 export type { PhotoStorage } from "@/lib/storage/types";
 
 let cachedStorage:
-  | { configurationKey: string; storage: PhotoStorage }
-  | undefined;
+  { configurationKey: string; storage: PhotoStorage } | undefined;
 
 export function getPhotoStorage(
   environment: Readonly<Record<string, string | undefined>> = process.env,

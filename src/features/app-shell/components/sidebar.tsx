@@ -1,10 +1,10 @@
-import { Database } from "lucide-react"
+import { Database } from "lucide-react";
 
-import { Badge } from "@/components/ui/badge"
-import { Separator } from "@/components/ui/separator"
-import { FeedyBrand } from "@/features/app-shell/components/feedy-brand"
-import { NavigationLinks } from "@/features/app-shell/components/navigation"
-import { RecentProjects } from "@/features/app-shell/components/recent-projects"
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { FeedyBrand } from "@/features/app-shell/components/feedy-brand";
+import { NavigationLinks } from "@/features/app-shell/components/navigation";
+import { RecentProjects } from "@/features/app-shell/components/recent-projects";
 
 export function Sidebar() {
   return (
@@ -32,5 +32,5 @@ export function Sidebar() {
         </p>
       </div>
     </aside>
-  )
+  );
 }

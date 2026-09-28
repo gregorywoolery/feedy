@@ -1,8 +1,6 @@
 import type postgres from "postgres";
 
-export type DatabaseEnvironment = Readonly<
-  Record<string, string | undefined>
->;
+export type DatabaseEnvironment = Readonly<Record<string, string | undefined>>;
 
 export type DatabaseConnectionOptions = Pick<
   postgres.Options<Record<string, postgres.PostgresType>>,
@@ -44,7 +42,9 @@ function validateDatabaseUrl(candidate: string, source: string): string {
   }
 
   if (url.protocol !== "postgresql:" && url.protocol !== "postgres:") {
-    throw new Error(`${source} must use the postgresql:// or postgres:// protocol.`);
+    throw new Error(
+      `${source} must use the postgresql:// or postgres:// protocol.`,
+    );
   }
 
   if (!url.hostname) {
@@ -68,11 +68,15 @@ function validateDatabaseUrl(candidate: string, source: string): string {
     sslMode !== "verify-full"
   ) {
     throw new Error(
-      `${source} points to Supabase and must include sslmode=require.`,
+      `${source} points to Supabase and must include sslmode=verify-full (sslmode=require is upgraded to verified TLS).`,
     );
   }
 
-  return candidate;
+  // Older URLs remain compatible, but never disable certificate verification.
+  if (sslMode === "require" || sslMode === "allow" || sslMode === "prefer") {
+    url.searchParams.set("sslmode", "verify-full");
+  }
+  return url.toString();
 }
 
 function readPort(value: string | undefined): number {
@@ -139,7 +143,7 @@ function buildSplitSupabaseUrl(
   url.hostname = host;
   url.port = String(port);
   url.pathname = `/${name}`;
-  url.searchParams.set("sslmode", "require");
+  url.searchParams.set("sslmode", "verify-full");
 
   return url.toString();
 }
@@ -160,7 +164,10 @@ export function getDatabaseUrl(
 
   const splitSupabaseUrl = buildSplitSupabaseUrl(environment);
   if (splitSupabaseUrl) {
-    return validateDatabaseUrl(splitSupabaseUrl, "split Supabase configuration");
+    return validateDatabaseUrl(
+      splitSupabaseUrl,
+      "split Supabase configuration",
+    );
   }
 
   if (environment.NODE_ENV === "test") {
@@ -208,7 +215,9 @@ function readPositiveInteger(
 }
 
 function resolveSslMode(databaseUrl: string): DatabaseConnectionOptions["ssl"] {
-  const sslMode = new URL(databaseUrl).searchParams.get("sslmode")?.toLowerCase();
+  const sslMode = new URL(databaseUrl).searchParams
+    .get("sslmode")
+    ?.toLowerCase();
 
   switch (sslMode) {
     case undefined:
@@ -216,11 +225,11 @@ function resolveSslMode(databaseUrl: string): DatabaseConnectionOptions["ssl"] {
     case "disable":
       return false;
     case "require":
-      return "require";
+      return "verify-full";
     case "allow":
-      return "allow";
+      return "verify-full";
     case "prefer":
-      return "prefer";
+      return "verify-full";
     case "verify-full":
       return "verify-full";
     default:
@@ -261,9 +270,9 @@ export function getDatabaseConnectionOptions(
     ssl: resolveSslMode(databaseUrl),
     connection: {
       application_name: "feedy",
-      search_path: [getDatabaseSchema(environment), "public"].filter(
-        (value, index, values) => values.indexOf(value) === index,
-      ).join(","),
+      search_path: [getDatabaseSchema(environment), "public"]
+        .filter((value, index, values) => values.indexOf(value) === index)
+        .join(","),
     },
   };
 }

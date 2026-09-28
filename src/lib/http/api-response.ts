@@ -7,11 +7,11 @@ export function errorResponse(
   status: number,
   code: string,
   message: string,
-  fields?: Record<string, string[]>
+  fields?: Record<string, string[]>,
 ) {
   return NextResponse.json<ApiErrorBody>(
     { error: { code, message, ...(fields ? { fields } : {}) } },
-    { status }
+    { status },
   );
 }
 
@@ -20,6 +20,6 @@ export function validationErrorResponse(error: ZodError) {
     400,
     "VALIDATION_ERROR",
     "Please correct the highlighted fields.",
-    error.flatten().fieldErrors as Record<string, string[]>
+    error.flatten().fieldErrors as Record<string, string[]>,
   );
 }

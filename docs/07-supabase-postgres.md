@@ -7,7 +7,7 @@ Feedy uses standard PostgreSQL tables and Drizzle migrations. Supabase is used o
 For a host-run application, replace the local URL:
 
 ```dotenv
-DATABASE_URL=postgresql://USER:PASSWORD@HOST:5432/postgres?sslmode=require
+DATABASE_URL=postgresql://USER:PASSWORD@HOST:5432/postgres?sslmode=verify-full
 DATABASE_SCHEMA=feedy
 STORAGE_DRIVER=database
 ```
@@ -17,12 +17,12 @@ You may instead use `SUPABASE_DB_URL` or `POSTGRES_URL`, but clear any higher-pr
 For the full Docker stack, leave the host `DATABASE_URL` alone and set:
 
 ```dotenv
-DOCKER_DATABASE_URL=postgresql://USER:PASSWORD@HOST:5432/postgres?sslmode=require
+DOCKER_DATABASE_URL=postgresql://USER:PASSWORD@HOST:5432/postgres?sslmode=verify-full
 ```
 
 Compose passes this value into the app as its canonical `DATABASE_URL`. The bundled local PostgreSQL container may still start for its health-gated Compose dependency, but the app and migration command use the external URL.
 
-Supabase hosts require `sslmode=require` or `sslmode=verify-full`. The configuration resolver rejects a Supabase URL without a required TLS mode.
+Supabase hosts require `sslmode=verify-full` or `sslmode=verify-full`. The configuration resolver rejects a Supabase URL without a required TLS mode.
 
 ## Alternative: split Supabase values
 
@@ -39,7 +39,7 @@ SUPABASE_DB_USER=postgres
 SUPABASE_DB_PASSWORD=replace-me
 ```
 
-All four host/name/user/password values are required together. Port defaults to 5432. The URL builder safely encodes user and password characters and automatically adds `sslmode=require`.
+All four host/name/user/password values are required together. Port defaults to 5432. The URL builder safely encodes user and password characters and automatically adds `sslmode=verify-full`.
 
 The split values are resolved by host-run application and database commands. Docker Compose accepts the single `DOCKER_DATABASE_URL` override rather than forwarding the split variables.
 

@@ -1,4 +1,12 @@
-import { ArrowLeft, CalendarDays, Download, Images, Layers3, Pencil, Trash2 } from "lucide-react";
+import {
+  ArrowLeft,
+  CalendarDays,
+  Download,
+  Images,
+  Layers3,
+  Pencil,
+  Trash2,
+} from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -6,18 +14,25 @@ import { notFound } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LocalDateTime } from "@/components/local-date-time";
-import { getFeedbackById } from "@/data-access/feedback/feedback-repository";
+import { getFeedbackDetail } from "@/server/application";
 import { DeleteFeedbackDialog } from "@/features/feedback/components/delete-feedback-dialog";
 import { EditFeedbackSheet } from "@/features/feedback/components/edit-feedback-sheet";
-import { PhotoPreviewDialog, PhotoPreviewOverlay } from "@/features/feedback/components/photo-preview-dialog";
+import {
+  PhotoPreviewDialog,
+  PhotoPreviewOverlay,
+} from "@/features/feedback/components/photo-preview-dialog";
 import { feedbackIdSchema } from "@/lib/validation/feedback";
 
 export const dynamic = "force-dynamic";
 
-export default async function FeedbackDetailPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function FeedbackDetailPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
   const { id } = await params;
   if (!feedbackIdSchema.safeParse(id).success) notFound();
-  const feedback = await getFeedbackById(id);
+  const feedback = await getFeedbackDetail(id);
   if (!feedback) notFound();
 
   return (
@@ -40,7 +55,15 @@ export default async function FeedbackDetailPage({ params }: { params: Promise<{
           </div>
         </div>
         <div className="flex flex-col gap-2 sm:flex-row">
-          <EditFeedbackSheet feedback={feedback} trigger={<Button type="button" variant="outline"><Pencil aria-hidden="true" data-icon="inline-start" />Edit feedback</Button>} />
+          <EditFeedbackSheet
+            feedback={feedback}
+            trigger={
+              <Button type="button" variant="outline">
+                <Pencil aria-hidden="true" data-icon="inline-start" />
+                Edit feedback
+              </Button>
+            }
+          />
           <DeleteFeedbackDialog
             ids={[feedback.id]}
             redirectTo={`/?project=${feedback.projectId}`}
@@ -84,10 +107,16 @@ export default async function FeedbackDetailPage({ params }: { params: Promise<{
               </div>
             </div>
             <div className="flex items-start gap-3 [&_svg]:mt-0.5 [&_svg]:size-4 [&_svg]:shrink-0">
-              <CalendarDays aria-hidden="true" className="text-muted-foreground" />
+              <CalendarDays
+                aria-hidden="true"
+                className="text-muted-foreground"
+              />
               <div className="flex flex-col gap-1">
                 <span className="text-muted-foreground">Created</span>
-                <LocalDateTime className="font-medium" value={feedback.createdAt} />
+                <LocalDateTime
+                  className="font-medium"
+                  value={feedback.createdAt}
+                />
               </div>
             </div>
             <div className="flex items-start gap-3 [&_svg]:mt-0.5 [&_svg]:size-4 [&_svg]:shrink-0">
@@ -103,25 +132,42 @@ export default async function FeedbackDetailPage({ params }: { params: Promise<{
 
       <section className="flex flex-col gap-4" aria-labelledby="photos-title">
         <div className="flex items-center justify-between gap-4">
-          <h2 className="text-xl font-semibold tracking-tight" id="photos-title">Photos</h2>
-          <span className="text-sm text-muted-foreground">{feedback.photoCount} attached</span>
+          <h2
+            className="text-xl font-semibold tracking-tight"
+            id="photos-title"
+          >
+            Photos
+          </h2>
+          <span className="text-sm text-muted-foreground">
+            {feedback.photoCount} attached
+          </span>
         </div>
         {feedback.photos.length ? (
           <div className="grid gap-4 md:grid-cols-2">
             {feedback.photos.map((photo, index) => (
-              <figure className="overflow-hidden rounded-xl border bg-card shadow-sm" key={photo.id}>
-                <PhotoPreviewDialog filename={photo.originalFilename} src={photo.url}>
-                <button aria-label={`View ${photo.originalFilename} full size`} className="relative block aspect-[4/3] w-full bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" type="button">
-                  <Image
-                    alt={`${feedback.projectName} feedback photo ${index + 1}`}
-                    className="object-contain"
-                    fill
-                    sizes="(max-width: 768px) 100vw, 50vw"
-                    src={photo.url}
-                    unoptimized
-                  />
-                  <PhotoPreviewOverlay />
-                </button>
+              <figure
+                className="overflow-hidden rounded-xl border bg-card shadow-sm"
+                key={photo.id}
+              >
+                <PhotoPreviewDialog
+                  filename={photo.originalFilename}
+                  src={photo.url}
+                >
+                  <button
+                    aria-label={`View ${photo.originalFilename} full size`}
+                    className="relative block aspect-[4/3] w-full bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    type="button"
+                  >
+                    <Image
+                      alt={`${feedback.projectName} feedback photo ${index + 1}`}
+                      className="object-contain"
+                      fill
+                      sizes="(max-width: 768px) 100vw, 50vw"
+                      src={photo.url}
+                      unoptimized
+                    />
+                    <PhotoPreviewOverlay />
+                  </button>
                 </PhotoPreviewDialog>
                 <figcaption className="border-t px-4 py-3 text-sm text-muted-foreground">
                   {photo.originalFilename}

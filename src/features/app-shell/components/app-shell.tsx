@@ -1,13 +1,13 @@
-import type { ReactNode } from "react"
+import type { ReactNode } from "react";
 
-import { MobileNav } from "@/features/app-shell/components/mobile-nav"
-import { Sidebar } from "@/features/app-shell/components/sidebar"
-import { cn } from "@/lib/utils"
+import { MobileNav } from "@/features/app-shell/components/mobile-nav";
+import { Sidebar } from "@/features/app-shell/components/sidebar";
+import { cn } from "@/lib/utils";
 
 type AppShellProps = {
-  children: ReactNode
-  contentClassName?: string
-}
+  children: ReactNode;
+  contentClassName?: string;
+};
 
 export function AppShell({ children, contentClassName }: AppShellProps) {
   return (
@@ -26,7 +26,7 @@ export function AppShell({ children, contentClassName }: AppShellProps) {
         <main
           className={cn(
             "mx-auto min-h-[calc(100dvh-4rem)] w-full max-w-[1600px] px-4 py-6 sm:px-6 lg:min-h-dvh lg:px-8 lg:py-8",
-            contentClassName
+            contentClassName,
           )}
           id="main-content"
         >
@@ -34,5 +34,5 @@ export function AppShell({ children, contentClassName }: AppShellProps) {
         </main>
       </div>
     </div>
-  )
+  );
 }

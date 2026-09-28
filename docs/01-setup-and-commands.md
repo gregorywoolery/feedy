@@ -55,35 +55,35 @@ All three must be positive integers. Prepared statements are disabled by the dat
 
 ## Application routes
 
-| Route | Purpose |
-| --- | --- |
-| `/` | Feedback dashboard, filters, selection, and exports |
-| `/projects` | Project directory and project/feedback creation |
-| `/projects/:id` | One project, its feedback filters/exports, and project-scoped creation/deletion |
-| `/feedback/:id` | Complete feedback record and photo gallery |
-| `/api/projects` | `POST` project creation |
-| `/api/projects/:id` | `DELETE` one project and its feedback |
-| `/api/feedback` | `POST` multipart feedback creation or `DELETE` an ID batch |
-| `/api/photos/:id` | Read one stored photo by photo ID |
-| `/api/feedback/:id/export` | Download one feedback PDF |
-| `/api/feedback/export` | `POST` a selected-ID or filtered-result batch and download one PDF |
+| Route                      | Purpose                                                                         |
+| -------------------------- | ------------------------------------------------------------------------------- |
+| `/`                        | Feedback dashboard, filters, selection, and exports                             |
+| `/projects`                | Project directory and project/feedback creation                                 |
+| `/projects/:id`            | One project, its feedback filters/exports, and project-scoped creation/deletion |
+| `/feedback/:id`            | Complete feedback record and photo gallery                                      |
+| `/api/projects`            | `POST` project creation                                                         |
+| `/api/projects/:id`        | `DELETE` one project and its feedback                                           |
+| `/api/feedback`            | `POST` multipart feedback creation or `DELETE` an ID batch                      |
+| `/api/photos/:id`          | Read one stored photo by photo ID                                               |
+| `/api/feedback/:id/export` | Download one feedback PDF                                                       |
+| `/api/feedback/export`     | `POST` a selected-ID or filtered-result batch and download one PDF              |
 
 ## Commands
 
-| Command | Result |
-| --- | --- |
-| `npm run dev` | Start the Next.js development server |
-| `npm run build` | Create the production/standalone Next.js build |
-| `npm run start` | Serve a completed build |
-| `npm run lint` | Run ESLint over the repository |
-| `npm run typecheck` | Run TypeScript without emitting files |
-| `npm test` | Run all `tests/unit` files once with Vitest |
-| `npm run test:coverage` | Run unit tests with text and HTML V8 coverage |
-| `npm run test:e2e` | Start the configured test server and run Playwright |
-| `npm run db:migrate` | Apply SQL migrations from `drizzle/` |
-| `npm run db:seed` | Upsert the checked-in sample records |
-| `npm run db:generate` | Generate a new migration from the Drizzle schema |
-| `npm run db:studio` | Open Drizzle Studio against the selected database |
+| Command                 | Result                                              |
+| ----------------------- | --------------------------------------------------- |
+| `npm run dev`           | Start the Next.js development server                |
+| `npm run build`         | Create the production/standalone Next.js build      |
+| `npm run start`         | Serve a completed build                             |
+| `npm run lint`          | Run ESLint over the repository                      |
+| `npm run typecheck`     | Run TypeScript without emitting files               |
+| `npm test`              | Run all `tests/unit` files once with Vitest         |
+| `npm run test:coverage` | Run unit tests with text and HTML V8 coverage       |
+| `npm run test:e2e`      | Start the configured test server and run Playwright |
+| `npm run db:migrate`    | Apply SQL migrations from `drizzle/`                |
+| `npm run db:seed`       | Upsert the checked-in sample records                |
+| `npm run db:generate`   | Generate a new migration from the Drizzle schema    |
+| `npm run db:studio`     | Open Drizzle Studio against the selected database   |
 
 ## Current product boundaries
 

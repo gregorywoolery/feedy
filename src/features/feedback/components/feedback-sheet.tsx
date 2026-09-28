@@ -1,10 +1,17 @@
 "use client";
 
-import { ArrowLeft, ArrowRight, CheckCircle2, ImagePlus, Loader2, Trash2 } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  CheckCircle2,
+  ImagePlus,
+  Loader2,
+  Trash2,
+} from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { type ReactNode, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -12,7 +19,7 @@ import {
   FieldDescription,
   FieldError,
   FieldGroup,
-  FieldLabel
+  FieldLabel,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import {
@@ -21,7 +28,7 @@ import {
   SelectGroup,
   SelectItem,
   SelectTrigger,
-  SelectValue
+  SelectValue,
 } from "@/components/ui/select";
 import {
   Sheet,
@@ -31,26 +38,29 @@ import {
   SheetFooter,
   SheetHeader,
   SheetTitle,
-  SheetTrigger
+  SheetTrigger,
 } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
 import type { ApiErrorBody } from "@/entities/contracts/api";
 import type { FeedbackDetailRecord } from "@/entities/contracts/feedback";
 import type { ProjectOption } from "@/entities/contracts/project";
 import {
-  MAX_PHOTO_BYTES,
-  MAX_PHOTO_COUNT,
-  MAX_TOTAL_PHOTO_BYTES
-} from "@/lib/validation/photo-limits";
-import { PhotoPreviewDialog, PhotoPreviewOverlay } from "./photo-preview-dialog";
+  newPhotoDraft,
+  photoSelectionError,
+  type NewPhotoDraft,
+} from "../client/photo-draft";
+import {
+  PhotoPreviewDialog,
+  PhotoPreviewOverlay,
+} from "./photo-preview-dialog";
 
 type Stage = "form" | "review" | "success";
-type PhotoPreview = { id: string; file: File; url: string };
+type PhotoPreview = NewPhotoDraft;
 
 export function FeedbackSheet({
   trigger,
   projects,
-  defaultProjectId = ""
+  defaultProjectId = "",
 }: {
   trigger: ReactNode;
   projects: ProjectOption[];
@@ -105,26 +115,15 @@ export function FeedbackSheet({
   }
 
   function addPhotos(files: File[]) {
-    const nextErrors: Record<string, string[]> = {};
-    const combined = [...photos.map((item) => item.file), ...files];
-    if (combined.length > MAX_PHOTO_COUNT) {
-      nextErrors.photos = [`Add no more than ${MAX_PHOTO_COUNT} photos.`];
-    } else if (files.some((file) => !["image/jpeg", "image/png", "image/webp"].includes(file.type))) {
-      nextErrors.photos = ["Choose JPEG, PNG, or WebP images only."];
-    } else if (files.some((file) => file.size > MAX_PHOTO_BYTES)) {
-      nextErrors.photos = ["Each photo must be 10 MB or less."];
-    } else if (combined.reduce((total, file) => total + file.size, 0) > MAX_TOTAL_PHOTO_BYTES) {
-      nextErrors.photos = ["Photos must be 50 MB or less in total."];
-    }
-    if (nextErrors.photos) {
-      setErrors((current) => ({ ...current, ...nextErrors }));
+    const message = photoSelectionError(photos, files);
+    if (message) {
+      setErrors((current) => ({ ...current, photos: [message] }));
       return;
     }
-
     const additions = files.map((file) => {
-      const url = URL.createObjectURL(file);
-      photoUrls.current.add(url);
-      return { id: crypto.randomUUID(), file, url };
+      const draft = newPhotoDraft(file);
+      photoUrls.current.add(draft.url);
+      return draft;
     });
     setErrors((current) => ({ ...current, photos: [] }));
     setPhotos((current) => [...current, ...additions]);
@@ -155,8 +154,10 @@ export function FeedbackSheet({
     event.preventDefault();
     const fieldErrors: Record<string, string[]> = {};
     if (!projectId) fieldErrors.projectId = ["Choose a project."];
-    if (!projectVersion.trim()) fieldErrors.projectVersion = ["Enter the project version."];
-    if (!description.trim()) fieldErrors.description = ["Describe the feedback."];
+    if (!projectVersion.trim())
+      fieldErrors.projectVersion = ["Enter the project version."];
+    if (!description.trim())
+      fieldErrors.description = ["Describe the feedback."];
     setErrors(fieldErrors);
     if (Object.keys(fieldErrors).length) {
       window.setTimeout(() => {
@@ -193,14 +194,18 @@ export function FeedbackSheet({
       setStage("success");
       router.refresh();
     } catch {
-      setMessage("Feedy could not reach the server. Check your connection and try again.");
+      setMessage(
+        "Feedy could not reach the server. Check your connection and try again.",
+      );
       setStage("form");
     } finally {
       setPending(false);
     }
   }
 
-  const projectName = projects.find((project) => project.id === projectId)?.name ?? "Not selected";
+  const projectName =
+    projects.find((project) => project.id === projectId)?.name ??
+    "Not selected";
 
   return (
     <Sheet open={open} onOpenChange={handleOpenChange}>
@@ -210,10 +215,15 @@ export function FeedbackSheet({
           <form className="flex min-h-0 flex-1 flex-col" onSubmit={review}>
             <SheetHeader>
               <SheetTitle>Add feedback</SheetTitle>
-              <SheetDescription>Record what you observed and keep the evidence together.</SheetDescription>
+              <SheetDescription>
+                Record what you observed and keep the evidence together.
+              </SheetDescription>
             </SheetHeader>
             {message ? (
-              <div className="mx-6 mt-5 rounded-md border border-destructive/25 bg-destructive/5 px-4 py-3 text-sm text-destructive" role="alert">
+              <div
+                className="mx-6 mt-5 rounded-md border border-destructive/25 bg-destructive/5 px-4 py-3 text-sm text-destructive"
+                role="alert"
+              >
                 {message}
               </div>
             ) : null}
@@ -222,7 +232,10 @@ export function FeedbackSheet({
                 <Field data-invalid={Boolean(errors.projectId)}>
                   <FieldLabel htmlFor="feedback-project">Project</FieldLabel>
                   <Select value={projectId} onValueChange={setProjectId}>
-                    <SelectTrigger aria-invalid={Boolean(errors.projectId)} id="feedback-project">
+                    <SelectTrigger
+                      aria-invalid={Boolean(errors.projectId)}
+                      id="feedback-project"
+                    >
                       <SelectValue placeholder="Choose a project" />
                     </SelectTrigger>
                     <SelectContent>
@@ -238,7 +251,9 @@ export function FeedbackSheet({
                   <FieldError>{errors.projectId?.[0]}</FieldError>
                 </Field>
                 <Field data-invalid={Boolean(errors.projectVersion)}>
-                  <FieldLabel htmlFor="feedback-version">Project version</FieldLabel>
+                  <FieldLabel htmlFor="feedback-version">
+                    Project version
+                  </FieldLabel>
                   <Input
                     aria-invalid={Boolean(errors.projectVersion)}
                     autoComplete="off"
@@ -249,11 +264,15 @@ export function FeedbackSheet({
                     ref={versionRef}
                     value={projectVersion}
                   />
-                  <FieldDescription>Free text, so build labels and release names work too.</FieldDescription>
+                  <FieldDescription>
+                    Free text, so build labels and release names work too.
+                  </FieldDescription>
                   <FieldError>{errors.projectVersion?.[0]}</FieldError>
                 </Field>
                 <Field data-invalid={Boolean(errors.description)}>
-                  <FieldLabel htmlFor="feedback-description">Description</FieldLabel>
+                  <FieldLabel htmlFor="feedback-description">
+                    Description
+                  </FieldLabel>
                   <Textarea
                     aria-invalid={Boolean(errors.description)}
                     id="feedback-description"
@@ -263,7 +282,9 @@ export function FeedbackSheet({
                     rows={7}
                     value={description}
                   />
-                  <FieldDescription>{description.length.toLocaleString()} / 10,000</FieldDescription>
+                  <FieldDescription>
+                    {description.length.toLocaleString()} / 10,000
+                  </FieldDescription>
                   <FieldError>{errors.description?.[0]}</FieldError>
                 </Field>
                 <Field data-invalid={Boolean(errors.photos)}>
@@ -273,8 +294,12 @@ export function FeedbackSheet({
                       <ImagePlus aria-hidden="true" />
                     </span>
                     <span className="flex flex-col gap-1 text-sm">
-                      <span className="font-medium text-foreground">Drop images here or choose files</span>
-                      <span className="text-muted-foreground">JPEG, PNG, or WebP · 10 MB each</span>
+                      <span className="font-medium text-foreground">
+                        Drop images here or choose files
+                      </span>
+                      <span className="text-muted-foreground">
+                        JPEG, PNG, or WebP · 10 MB each
+                      </span>
                     </span>
                     <input
                       accept="image/jpeg,image/png,image/webp"
@@ -290,27 +315,70 @@ export function FeedbackSheet({
                   </label>
                   <FieldError>{errors.photos?.[0]}</FieldError>
                   {photos.length ? (
-                    <div className="grid grid-cols-2 gap-3" aria-label="Selected photos">
+                    <div
+                      className="grid grid-cols-2 gap-3"
+                      aria-label="Selected photos"
+                    >
                       {photos.map((photo, index) => (
-                        <div className="overflow-hidden rounded-lg border bg-card" key={photo.id}>
-                          <PhotoPreviewDialog filename={photo.file.name} src={photo.url}>
-                            <button aria-label={`View ${photo.file.name} full size`} className="relative block aspect-[4/3] w-full bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" type="button">
-                              <Image alt={`Selected photo ${index + 1}`} fill sizes="240px" src={photo.url} unoptimized className="object-cover" />
+                        <div
+                          className="overflow-hidden rounded-lg border bg-card"
+                          key={photo.id}
+                        >
+                          <PhotoPreviewDialog
+                            filename={photo.file.name}
+                            src={photo.url}
+                          >
+                            <button
+                              aria-label={`View ${photo.file.name} full size`}
+                              className="relative block aspect-[4/3] w-full bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                              type="button"
+                            >
+                              <Image
+                                alt={`Selected photo ${index + 1}`}
+                                fill
+                                sizes="240px"
+                                src={photo.url}
+                                unoptimized
+                                className="object-cover"
+                              />
                               <PhotoPreviewOverlay />
                             </button>
                           </PhotoPreviewDialog>
                           <div className="flex items-center justify-between gap-2 p-2.5">
-                            <p className="min-w-0 truncate text-xs text-muted-foreground" title={photo.file.name}>
+                            <p
+                              className="min-w-0 truncate text-xs text-muted-foreground"
+                              title={photo.file.name}
+                            >
                               {photo.file.name}
                             </p>
                             <div className="flex shrink-0 gap-1">
-                              <Button aria-label={`Move ${photo.file.name} earlier`} disabled={index === 0} onClick={() => movePhoto(index, -1)} size="icon" type="button" variant="ghost">
+                              <Button
+                                aria-label={`Move ${photo.file.name} earlier`}
+                                disabled={index === 0}
+                                onClick={() => movePhoto(index, -1)}
+                                size="icon"
+                                type="button"
+                                variant="ghost"
+                              >
                                 <ArrowLeft aria-hidden="true" />
                               </Button>
-                              <Button aria-label={`Move ${photo.file.name} later`} disabled={index === photos.length - 1} onClick={() => movePhoto(index, 1)} size="icon" type="button" variant="ghost">
+                              <Button
+                                aria-label={`Move ${photo.file.name} later`}
+                                disabled={index === photos.length - 1}
+                                onClick={() => movePhoto(index, 1)}
+                                size="icon"
+                                type="button"
+                                variant="ghost"
+                              >
                                 <ArrowRight aria-hidden="true" />
                               </Button>
-                              <Button aria-label={`Remove ${photo.file.name}`} onClick={() => removePhoto(index)} size="icon" type="button" variant="ghost">
+                              <Button
+                                aria-label={`Remove ${photo.file.name}`}
+                                onClick={() => removePhoto(index)}
+                                size="icon"
+                                type="button"
+                                variant="ghost"
+                              >
                                 <Trash2 aria-hidden="true" />
                               </Button>
                             </div>
@@ -323,7 +391,11 @@ export function FeedbackSheet({
               </FieldGroup>
             </SheetBody>
             <SheetFooter>
-              <Button type="button" variant="outline" onClick={() => handleOpenChange(false)}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => handleOpenChange(false)}
+              >
                 Cancel
               </Button>
               <Button type="submit">Review feedback</Button>
@@ -335,7 +407,9 @@ export function FeedbackSheet({
           <div className="flex min-h-0 flex-1 flex-col">
             <SheetHeader>
               <SheetTitle>Review feedback</SheetTitle>
-              <SheetDescription>Confirm the record and photo order before saving.</SheetDescription>
+              <SheetDescription>
+                Confirm the record and photo order before saving.
+              </SheetDescription>
             </SheetHeader>
             <SheetBody>
               <dl className="overflow-hidden rounded-lg border bg-card">
@@ -343,20 +417,45 @@ export function FeedbackSheet({
                   ["Project", projectName],
                   ["Version", projectVersion.trim()],
                   ["Description", description.trim()],
-                  ["Photos", photos.length ? `${photos.length} attached` : "No photos"]
+                  [
+                    "Photos",
+                    photos.length ? `${photos.length} attached` : "No photos",
+                  ],
                 ].map(([label, value], index, values) => (
-                  <div className={`grid gap-1 px-4 py-4 sm:grid-cols-[8rem_1fr] sm:gap-4 ${index < values.length - 1 ? "border-b" : ""}`} key={label}>
-                    <dt className="text-sm font-medium text-muted-foreground">{label}</dt>
-                    <dd className="whitespace-pre-wrap text-sm leading-6 text-foreground">{value}</dd>
+                  <div
+                    className={`grid gap-1 px-4 py-4 sm:grid-cols-[8rem_1fr] sm:gap-4 ${index < values.length - 1 ? "border-b" : ""}`}
+                    key={label}
+                  >
+                    <dt className="text-sm font-medium text-muted-foreground">
+                      {label}
+                    </dt>
+                    <dd className="whitespace-pre-wrap text-sm leading-6 text-foreground">
+                      {value}
+                    </dd>
                   </div>
                 ))}
               </dl>
               {photos.length ? (
                 <div className="mt-5 grid grid-cols-3 gap-3">
                   {photos.map((photo, index) => (
-                    <PhotoPreviewDialog filename={photo.file.name} key={photo.id} src={photo.url}>
-                      <button aria-label={`View ${photo.file.name} full size`} className="relative aspect-square overflow-hidden rounded-lg border bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" type="button">
-                        <Image alt={`Photo ${index + 1} of ${photos.length}`} fill sizes="160px" src={photo.url} unoptimized className="object-cover" />
+                    <PhotoPreviewDialog
+                      filename={photo.file.name}
+                      key={photo.id}
+                      src={photo.url}
+                    >
+                      <button
+                        aria-label={`View ${photo.file.name} full size`}
+                        className="relative aspect-square overflow-hidden rounded-lg border bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        type="button"
+                      >
+                        <Image
+                          alt={`Photo ${index + 1} of ${photos.length}`}
+                          fill
+                          sizes="160px"
+                          src={photo.url}
+                          unoptimized
+                          className="object-cover"
+                        />
                         <PhotoPreviewOverlay />
                       </button>
                     </PhotoPreviewDialog>
@@ -365,11 +464,22 @@ export function FeedbackSheet({
               ) : null}
             </SheetBody>
             <SheetFooter>
-              <Button disabled={pending} type="button" variant="outline" onClick={() => setStage("form")}>
+              <Button
+                disabled={pending}
+                type="button"
+                variant="outline"
+                onClick={() => setStage("form")}
+              >
                 Back to edit
               </Button>
               <Button disabled={pending} type="button" onClick={save}>
-                {pending ? <Loader2 aria-hidden="true" className="animate-spin" data-icon="inline-start" /> : null}
+                {pending ? (
+                  <Loader2
+                    aria-hidden="true"
+                    className="animate-spin"
+                    data-icon="inline-start"
+                  />
+                ) : null}
                 Save feedback
               </Button>
             </SheetFooter>
@@ -380,23 +490,35 @@ export function FeedbackSheet({
           <div className="flex min-h-0 flex-1 flex-col">
             <SheetHeader>
               <SheetTitle>Feedback saved</SheetTitle>
-              <SheetDescription>The record is ready to view or export.</SheetDescription>
+              <SheetDescription>
+                The record is ready to view or export.
+              </SheetDescription>
             </SheetHeader>
             <SheetBody>
-              <div className="flex flex-col items-start gap-4 rounded-lg border bg-card p-5" role="status">
+              <div
+                className="flex flex-col items-start gap-4 rounded-lg border bg-card p-5"
+                role="status"
+              >
                 <span className="inline-flex size-11 items-center justify-center rounded-full bg-emerald-50 text-emerald-700 [&_svg]:size-5">
                   <CheckCircle2 aria-hidden="true" />
                 </span>
                 <div className="flex flex-col gap-1">
-                  <p className="font-medium text-foreground">{created?.projectName} · {created?.projectVersion}</p>
-                  <p className="text-sm leading-6 text-muted-foreground">Your description and {created?.photoCount ?? 0} photos were saved together.</p>
+                  <p className="font-medium text-foreground">
+                    {created?.projectName} · {created?.projectVersion}
+                  </p>
+                  <p className="text-sm leading-6 text-muted-foreground">
+                    Your description and {created?.photoCount ?? 0} photos were
+                    saved together.
+                  </p>
                 </div>
               </div>
             </SheetBody>
             <SheetFooter>
               {created ? (
                 <Button asChild variant="outline">
-                  <Link href={`/feedback/${created.id}`} prefetch={false}>View feedback</Link>
+                  <Link href={`/feedback/${created.id}`} prefetch={false}>
+                    View feedback
+                  </Link>
                 </Button>
               ) : null}
               <Button type="button" onClick={() => handleOpenChange(false)}>

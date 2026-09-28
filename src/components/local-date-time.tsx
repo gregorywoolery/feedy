@@ -1,8 +1,8 @@
-"use client"
+"use client";
 
-import { useSyncExternalStore } from "react"
+import { useSyncExternalStore } from "react";
 
-import { cn } from "@/lib/utils"
+import { cn } from "@/lib/utils";
 
 const fallbackFormatter = new Intl.DateTimeFormat("en-US", {
   day: "numeric",
@@ -12,7 +12,7 @@ const fallbackFormatter = new Intl.DateTimeFormat("en-US", {
   timeZone: "UTC",
   timeZoneName: "short",
   year: "numeric",
-})
+});
 
 export function formatLocalDateTime(value: string) {
   return new Intl.DateTimeFormat(undefined, {
@@ -22,7 +22,7 @@ export function formatLocalDateTime(value: string) {
     month: "short",
     timeZoneName: "short",
     year: "numeric",
-  }).format(new Date(value))
+  }).format(new Date(value));
 }
 
 export function LocalDateTime({
@@ -30,23 +30,23 @@ export function LocalDateTime({
   prefix,
   className,
 }: {
-  value: string
-  prefix?: string
-  className?: string
+  value: string;
+  prefix?: string;
+  className?: string;
 }) {
   const isHydrated = useSyncExternalStore(
     () => () => undefined,
     () => true,
-    () => false
-  )
+    () => false,
+  );
   const formatted = isHydrated
     ? formatLocalDateTime(value)
-    : fallbackFormatter.format(new Date(value))
+    : fallbackFormatter.format(new Date(value));
 
   return (
     <time className={cn(className)} dateTime={value}>
       {prefix}
       {formatted}
     </time>
-  )
+  );
 }

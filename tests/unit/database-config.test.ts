@@ -8,7 +8,8 @@ import { describe, expect, it } from "vitest";
 describe("database configuration", () => {
   it("uses direct connection URLs in the documented precedence order", () => {
     const environment = {
-      DATABASE_URL: "postgresql://direct:secret@db:5432/direct_db?sslmode=disable",
+      DATABASE_URL:
+        "postgresql://direct:secret@db:5432/direct_db?sslmode=disable",
       POSTGRES_URL: "postgresql://postgres:secret@db:5432/postgres_db",
       SUPABASE_DB_URL:
         "postgresql://supabase:secret@db.example.com:5432/supabase_db?sslmode=require",
@@ -18,11 +19,19 @@ describe("database configuration", () => {
     expect(
       getDatabaseUrl({
         POSTGRES_URL: environment.POSTGRES_URL,
-        SUPABASE_DB_URL: environment.SUPABASE_DB_URL,
+        SUPABASE_DB_URL: environment.SUPABASE_DB_URL.replace(
+          "sslmode=require",
+          "sslmode=verify-full",
+        ),
       }),
     ).toBe(environment.POSTGRES_URL);
-    expect(getDatabaseUrl({ SUPABASE_DB_URL: environment.SUPABASE_DB_URL })).toBe(
-      environment.SUPABASE_DB_URL,
+    expect(
+      getDatabaseUrl({ SUPABASE_DB_URL: environment.SUPABASE_DB_URL }),
+    ).toBe(
+      environment.SUPABASE_DB_URL.replace(
+        "sslmode=require",
+        "sslmode=verify-full",
+      ),
     );
   });
 
@@ -40,8 +49,10 @@ describe("database configuration", () => {
     expect(parsed.port).toBe("6543");
     expect(parsed.pathname).toBe("/postgres");
     expect(decodeURIComponent(parsed.username)).toBe("postgres.project");
-    expect(decodeURIComponent(parsed.password)).toBe(" p@ss word/with?symbols ");
-    expect(parsed.searchParams.get("sslmode")).toBe("require");
+    expect(decodeURIComponent(parsed.password)).toBe(
+      " p@ss word/with?symbols ",
+    );
+    expect(parsed.searchParams.get("sslmode")).toBe("verify-full");
   });
 
   it("uses port 5432 for split Supabase configuration by default", () => {
@@ -72,7 +83,7 @@ describe("database configuration", () => {
         DATABASE_URL:
           "postgresql://postgres:secret@db.example.supabase.co:5432/postgres",
       }),
-    ).toThrow(/must include sslmode=require/);
+    ).toThrow(/must include sslmode=verify-full/);
   });
 
   it("provides a non-networking fallback URL while unit tests import modules", () => {
@@ -92,7 +103,10 @@ describe("database configuration", () => {
     );
 
     expect(localOptions).toMatchObject({ ssl: false, prepare: false });
-    expect(supabaseOptions).toMatchObject({ ssl: "require", prepare: false });
+    expect(supabaseOptions).toMatchObject({
+      ssl: "verify-full",
+      prepare: false,
+    });
   });
 
   it("uses bounded connection settings and validates overrides", () => {

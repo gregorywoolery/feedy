@@ -1,9 +1,11 @@
+import { presentFeedback } from "@/use-cases/present-feedback";
 import {
-  getFeedbackBatch,
-  listPhotoStorageRecords
-} from "@/data-access/feedback/feedback-repository";
+  ExportLimitError,
+  MAX_EXPORT_BYTES,
+  MAX_EXPORT_PHOTOS,
+} from "./export-limits";
+import type { ApplicationDependencies } from "@/use-cases/ports";
 import type { FeedbackExportRecord } from "@/entities/contracts/feedback";
-import { getPhotoStorage } from "@/lib/storage";
 
 export class FeedbackExportNotFoundError extends Error {
   constructor() {
@@ -12,11 +14,29 @@ export class FeedbackExportNotFoundError extends Error {
   }
 }
 
-export async function getExportRecords(ids: string[]): Promise<FeedbackExportRecord[]> {
-  const details = await getFeedbackBatch(ids);
+export async function getExportRecords(
+  ids: string[],
+  dependencies: ApplicationDependencies,
+): Promise<FeedbackExportRecord[]> {
+  const details = (await dependencies.feedback.getFeedbackBatch(ids)).map(
+    presentFeedback,
+  );
   if (details.length !== ids.length) throw new FeedbackExportNotFoundError();
 
-  const storedPhotos = await listPhotoStorageRecords(ids);
+  const storedPhotos = await dependencies.feedback.listPhotoStorageRecords(ids);
+  const totalBytes = storedPhotos.reduce(
+    (sum, photo) => sum + photo.sizeBytes,
+    0,
+  );
+  if (
+    storedPhotos.length > MAX_EXPORT_PHOTOS ||
+    totalBytes > MAX_EXPORT_BYTES
+  ) {
+    throw new ExportLimitError(
+      "Export up to 100 photos and 50 MB of photo data at a time. Narrow your selection.",
+    );
+  }
+  let loadedBytes = 0;
   const storageRowsByFeedback = new Map<string, typeof storedPhotos>();
   for (const photo of storedPhotos) {
     const list = storageRowsByFeedback.get(photo.feedbackId) ?? [];
@@ -24,7 +44,7 @@ export async function getExportRecords(ids: string[]): Promise<FeedbackExportRec
     storageRowsByFeedback.set(photo.feedbackId, list);
   }
 
-  const storage = getPhotoStorage();
+  const storage = dependencies.storage;
   const records: FeedbackExportRecord[] = [];
   for (const detail of details) {
     const storageRows = storageRowsByFeedback.get(detail.id) ?? [];
@@ -34,6 +54,12 @@ export async function getExportRecords(ids: string[]): Promise<FeedbackExportRec
       const metadata = photoById.get(row.id);
       if (!metadata) continue;
       const stored = await storage.get(row.storageKey);
+      loadedBytes += stored.bytes.byteLength;
+      if (loadedBytes > MAX_EXPORT_BYTES) {
+        throw new ExportLimitError(
+          "The selected photos exceed the 50 MB export limit.",
+        );
+      }
       photoBytes.push({ ...metadata, bytes: stored.bytes });
     }
     records.push({ ...detail, photoBytes });

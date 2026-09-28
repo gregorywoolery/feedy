@@ -14,7 +14,8 @@ ENV NEXT_TELEMETRY_DISABLED=1 \
 
 COPY . .
 COPY --from=dependencies /app/node_modules ./node_modules
-RUN mkdir -p public && npm run build
+RUN mkdir -p public && npm run build \
+    && ./node_modules/.bin/esbuild scripts/db-migrate.ts --bundle --platform=node --format=cjs --packages=external --outfile=build/db-migrate.cjs
 
 FROM node:22-bookworm-slim AS runner
 
@@ -36,10 +37,11 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 COPY --from=dependencies --chown=nextjs:nodejs /app/node_modules/drizzle-orm ./node_modules/drizzle-orm
 COPY --from=dependencies --chown=nextjs:nodejs /app/node_modules/postgres ./node_modules/postgres
-COPY --from=builder --chown=nextjs:nodejs /app/scripts/docker-migrate.mjs ./scripts/docker-migrate.mjs
+COPY --from=dependencies --chown=nextjs:nodejs /app/node_modules/@next/env ./node_modules/@next/env
+COPY --from=builder --chown=nextjs:nodejs /app/build/db-migrate.cjs ./scripts/db-migrate.cjs
 COPY --from=builder --chown=nextjs:nodejs /app/drizzle ./drizzle
 
 USER nextjs
 EXPOSE 3000
 
-CMD ["sh", "-c", "node scripts/docker-migrate.mjs && exec node server.js"]
+CMD ["sh", "-c", "node scripts/db-migrate.cjs && exec node server.js"]

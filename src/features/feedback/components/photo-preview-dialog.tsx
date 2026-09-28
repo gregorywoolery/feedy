@@ -4,9 +4,24 @@ import { Maximize2 } from "lucide-react";
 import Image from "next/image";
 import type { ReactNode } from "react";
 
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
-export function PhotoPreviewDialog({ src, filename, children }: { src: string; filename: string; children: ReactNode }) {
+export function PhotoPreviewDialog({
+  src,
+  filename,
+  children,
+}: {
+  src: string;
+  filename: string;
+  children: ReactNode;
+}) {
   return (
     <Dialog>
       <DialogTrigger asChild>{children}</DialogTrigger>
@@ -16,7 +31,14 @@ export function PhotoPreviewDialog({ src, filename, children }: { src: string; f
           <DialogDescription>Full-size feedback image</DialogDescription>
         </DialogHeader>
         <div className="relative min-h-[60dvh] flex-1 bg-muted/60">
-          <Image alt={filename} className="object-contain p-4" fill sizes="95vw" src={src} unoptimized />
+          <Image
+            alt={filename}
+            className="object-contain p-4"
+            fill
+            sizes="95vw"
+            src={src}
+            unoptimized
+          />
         </div>
       </DialogContent>
     </Dialog>
@@ -24,5 +46,9 @@ export function PhotoPreviewDialog({ src, filename, children }: { src: string; f
 }
 
 export function PhotoPreviewOverlay() {
-  return <span className="pointer-events-none absolute bottom-2 right-2 inline-flex size-9 items-center justify-center rounded-md bg-background/90 text-foreground shadow-sm"><Maximize2 aria-hidden="true" className="size-4" /></span>;
+  return (
+    <span className="pointer-events-none absolute bottom-2 right-2 inline-flex size-9 items-center justify-center rounded-md bg-background/90 text-foreground shadow-sm">
+      <Maximize2 aria-hidden="true" className="size-4" />
+    </span>
+  );
 }

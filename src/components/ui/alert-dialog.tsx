@@ -1,14 +1,14 @@
-"use client"
+"use client";
 
-import * as AlertDialogPrimitive from "@radix-ui/react-alert-dialog"
-import * as React from "react"
+import * as AlertDialogPrimitive from "@radix-ui/react-alert-dialog";
+import * as React from "react";
 
-import { buttonVariants } from "@/components/ui/button"
-import { cn } from "@/lib/utils"
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
-const AlertDialog = AlertDialogPrimitive.Root
-const AlertDialogTrigger = AlertDialogPrimitive.Trigger
-const AlertDialogPortal = AlertDialogPrimitive.Portal
+const AlertDialog = AlertDialogPrimitive.Root;
+const AlertDialogTrigger = AlertDialogPrimitive.Trigger;
+const AlertDialogPortal = AlertDialogPrimitive.Portal;
 
 const AlertDialogOverlay = React.forwardRef<
   React.ElementRef<typeof AlertDialogPrimitive.Overlay>,
@@ -17,13 +17,13 @@ const AlertDialogOverlay = React.forwardRef<
   <AlertDialogPrimitive.Overlay
     className={cn(
       "fixed inset-0 z-50 bg-foreground/40 backdrop-blur-[2px] transition-opacity duration-200 data-[state=closed]:opacity-0 data-[state=open]:opacity-100 motion-reduce:transition-none",
-      className
+      className,
     )}
     ref={ref}
     {...props}
   />
-))
-AlertDialogOverlay.displayName = AlertDialogPrimitive.Overlay.displayName
+));
+AlertDialogOverlay.displayName = AlertDialogPrimitive.Overlay.displayName;
 
 const AlertDialogContent = React.forwardRef<
   React.ElementRef<typeof AlertDialogPrimitive.Content>,
@@ -34,14 +34,14 @@ const AlertDialogContent = React.forwardRef<
     <AlertDialogPrimitive.Content
       className={cn(
         "fixed left-1/2 top-1/2 z-50 grid w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 gap-5 rounded-xl border bg-background p-6 shadow-sheet outline-none",
-        className
+        className,
       )}
       ref={ref}
       {...props}
     />
   </AlertDialogPortal>
-))
-AlertDialogContent.displayName = AlertDialogPrimitive.Content.displayName
+));
+AlertDialogContent.displayName = AlertDialogPrimitive.Content.displayName;
 
 function AlertDialogHeader({
   className,
@@ -52,7 +52,7 @@ function AlertDialogHeader({
       className={cn("flex flex-col gap-2 text-left", className)}
       {...props}
     />
-  )
+  );
 }
 
 function AlertDialogFooter({
@@ -63,11 +63,11 @@ function AlertDialogFooter({
     <div
       className={cn(
         "flex flex-col-reverse gap-2 sm:flex-row sm:justify-end",
-        className
+        className,
       )}
       {...props}
     />
-  )
+  );
 }
 
 const AlertDialogTitle = React.forwardRef<
@@ -79,8 +79,8 @@ const AlertDialogTitle = React.forwardRef<
     ref={ref}
     {...props}
   />
-))
-AlertDialogTitle.displayName = AlertDialogPrimitive.Title.displayName
+));
+AlertDialogTitle.displayName = AlertDialogPrimitive.Title.displayName;
 
 const AlertDialogDescription = React.forwardRef<
   React.ElementRef<typeof AlertDialogPrimitive.Description>,
@@ -91,8 +91,9 @@ const AlertDialogDescription = React.forwardRef<
     ref={ref}
     {...props}
   />
-))
-AlertDialogDescription.displayName = AlertDialogPrimitive.Description.displayName
+));
+AlertDialogDescription.displayName =
+  AlertDialogPrimitive.Description.displayName;
 
 const AlertDialogAction = React.forwardRef<
   React.ElementRef<typeof AlertDialogPrimitive.Action>,
@@ -103,8 +104,8 @@ const AlertDialogAction = React.forwardRef<
     ref={ref}
     {...props}
   />
-))
-AlertDialogAction.displayName = AlertDialogPrimitive.Action.displayName
+));
+AlertDialogAction.displayName = AlertDialogPrimitive.Action.displayName;
 
 const AlertDialogCancel = React.forwardRef<
   React.ElementRef<typeof AlertDialogPrimitive.Cancel>,
@@ -115,8 +116,8 @@ const AlertDialogCancel = React.forwardRef<
     ref={ref}
     {...props}
   />
-))
-AlertDialogCancel.displayName = AlertDialogPrimitive.Cancel.displayName
+));
+AlertDialogCancel.displayName = AlertDialogPrimitive.Cancel.displayName;
 
 export {
   AlertDialog,
@@ -129,4 +130,4 @@ export {
   AlertDialogPortal,
   AlertDialogTitle,
   AlertDialogTrigger,
-}
+};

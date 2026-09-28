@@ -66,3 +66,9 @@ With local storage, restoring only the database produces photo records whose byt
 ## Limitations
 
 This release has no object-bucket adapter, thumbnail cache, background upload processor, photo editing, or orphan-reconciliation job. Database storage is appropriate for the current moderate-size evidence files on serverless hosting; high-volume deployments should add an object-storage adapter and migration process.
+
+## Cleanup and recovery
+
+Deletion and photo replacement enqueue `photo_cleanup_jobs` in the metadata transaction. Immediate cleanup attempts remove the bytes and clear the job. Failed work remains durable; run `npm run storage:cleanup` periodically to retry up to 1,000 jobs per invocation. The adapter namespace prevents a job being applied to a different local upload directory or storage driver.
+
+A process interruption between writing new bytes and committing metadata can leave an unreferenced object. `npm run storage:reconcile` reports unreferenced objects older than 24 hours in the selected storage adapter. Inspect the result, then run `npm run storage:reconcile -- --apply` to queue and remove them. The age threshold protects in-flight uploads. Run maintenance with the same database, schema, storage driver and upload directory as the app. Do not change storage drivers without migrating existing bytes.

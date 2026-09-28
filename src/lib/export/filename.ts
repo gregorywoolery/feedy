@@ -10,7 +10,11 @@ export function sanitizeFilenameSegment(value: string) {
   );
 }
 
-export function singleExportFilename(projectName: string, version: string, date: Date) {
+export function singleExportFilename(
+  projectName: string,
+  version: string,
+  date: Date,
+) {
   return `feedy-${sanitizeFilenameSegment(projectName)}-${sanitizeFilenameSegment(version)}-${date
     .toISOString()
     .slice(0, 10)}.pdf`;

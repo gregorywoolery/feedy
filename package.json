@@ -2,7 +2,7 @@
   "name": "feedy",
   "version": "0.1.0",
   "private": true,
-  "license": "UNLICENSED",
+  "license": "MIT",
   "engines": {
     "node": "22.x"
   },
@@ -18,7 +18,13 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx scripts/db-migrate.ts",
     "db:seed": "tsx scripts/db-seed.ts",
-    "db:studio": "drizzle-kit studio"
+    "db:studio": "drizzle-kit studio",
+    "storage:cleanup": "tsx scripts/storage-cleanup.ts",
+    "format": "prettier --write src scripts tests docs *.md *.json *.mjs",
+    "format:check": "prettier --check src scripts tests docs *.md *.json *.mjs",
+    "check:secrets": "node scripts/check-secrets.mjs",
+    "test:integration": "vitest run --config vitest.integration.config.ts",
+    "storage:reconcile": "tsx scripts/storage-reconcile.ts"
   },
   "dependencies": {
     "@radix-ui/react-alert-dialog": "^1.1.23",
@@ -40,6 +46,7 @@
     "postgres": "^3.4.8",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
+    "server-only": "^0.0.1",
     "sharp": "^0.35.4",
     "sonner": "^2.0.7",
     "tailwind-merge": "^2.6.0",
@@ -55,17 +62,24 @@
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.5",
     "@vitejs/plugin-react": "^4.3.4",
-    "@vitest/coverage-v8": "^3.0.8",
+    "@vitest/coverage-v8": "4.1.11",
     "autoprefixer": "^10.4.21",
     "drizzle-kit": "^0.31.10",
+    "esbuild": "^0.28.2",
     "eslint": "^9.39.5",
     "eslint-config-next": "^16.3.3",
     "jsdom": "^26.0.0",
     "playwright": "^1.59.1",
     "postcss": "^8.5.3",
+    "prettier": "^3.9.9",
     "tailwindcss": "^3.4.17",
     "tsx": "^4.19.3",
     "typescript": "^5.7.3",
-    "vitest": "^3.0.8"
+    "vitest": "4.1.11"
+  },
+  "overrides": {
+    "@esbuild-kit/core-utils": {
+      "esbuild": "^0.25.0"
+    }
   }
 }

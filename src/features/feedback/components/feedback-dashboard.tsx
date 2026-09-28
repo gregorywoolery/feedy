@@ -1,8 +1,17 @@
 "use client";
 
 import {
+  EmptyFeedbackState,
+  MetricCard,
+  PhotoPreviewGroup,
+  ProjectIdentity,
+  SortableHead,
+} from "./dashboard-parts";
+
+import { useFeedbackDashboard } from "../hooks/use-feedback-dashboard";
+
+import {
   ArrowDown,
-  ArrowDownUp,
   ArrowUp,
   ChevronLeft,
   ChevronRight,
@@ -18,35 +27,14 @@ import {
   Search,
   SlidersHorizontal,
   Trash2,
-  X
+  X,
 } from "lucide-react";
-import Image from "next/image";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
-import {
-  type ChangeEvent,
-  type ComponentType,
-  type SVGProps,
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-  useTransition
-} from "react";
-import { toast } from "sonner";
 
+import { LocalDateTime } from "@/components/local-date-time";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { LocalDateTime } from "@/components/local-date-time";
-import {
-  Empty,
-  EmptyContent,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyMedia,
-  EmptyTitle
-} from "@/components/ui/empty";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -54,7 +42,7 @@ import {
   SelectGroup,
   SelectItem,
   SelectTrigger,
-  SelectValue
+  SelectValue,
 } from "@/components/ui/select";
 import {
   Table,
@@ -62,15 +50,12 @@ import {
   TableCell,
   TableHead,
   TableHeader,
-  TableRow
+  TableRow,
 } from "@/components/ui/table";
 import type {
-  FeedbackListItem,
   FeedbackPage,
   FeedbackQuery,
-  FeedbackSort,
   FeedbackSummary,
-  SortOrder
 } from "@/entities/contracts/feedback";
 import type { ProjectOption } from "@/entities/contracts/project";
 import { ProjectSheet } from "@/features/projects/components/project-sheet";
@@ -88,424 +73,42 @@ type FeedbackDashboardProps = {
   query: FeedbackQuery;
 };
 
-type QueryPatch = Partial<Record<keyof FeedbackQuery, string | number | undefined>>;
-type DashboardIcon = ComponentType<SVGProps<SVGSVGElement>>;
-
 const ALL_PROJECTS = "__all_projects";
 const ALL_VERSIONS = "__all_versions";
-
-function searchParamsFromQuery(query: FeedbackQuery) {
-  const params = new URLSearchParams();
-  if (query.q) params.set("q", query.q);
-  if (query.project) params.set("project", query.project);
-  if (query.version) params.set("version", query.version);
-  if (query.hasPhotos !== "all") params.set("hasPhotos", query.hasPhotos);
-  if (query.from) params.set("from", query.from);
-  if (query.to) params.set("to", query.to);
-  if (query.sort !== "createdAt") params.set("sort", query.sort);
-  if (query.order !== "desc") params.set("order", query.order);
-  if (query.page !== 1) params.set("page", String(query.page));
-  if (query.pageSize !== 25) params.set("pageSize", String(query.pageSize));
-  return params;
-}
-
-function getExportFilename(contentDisposition: string | null) {
-  if (!contentDisposition) return "feedy-feedback-export.pdf";
-
-  const encodedMatch = contentDisposition.match(/filename\*=UTF-8''([^;]+)/i);
-  if (encodedMatch?.[1]) {
-    try {
-      return decodeURIComponent(encodedMatch[1].replace(/["']/g, ""));
-    } catch {
-      return "feedy-feedback-export.pdf";
-    }
-  }
-
-  const regularMatch = contentDisposition.match(/filename="?([^";]+)"?/i);
-  return regularMatch?.[1] ?? "feedy-feedback-export.pdf";
-}
-
-function getVisiblePages(currentPage: number, pageCount: number) {
-  if (pageCount <= 5) return Array.from({ length: pageCount }, (_, index) => index + 1);
-  const start = Math.min(Math.max(currentPage - 2, 1), pageCount - 4);
-  return Array.from({ length: 5 }, (_, index) => start + index);
-}
-
-function MetricCard({
-  icon: Icon,
-  label,
-  value,
-  helper
-}: {
-  icon: DashboardIcon;
-  label: string;
-  value: number;
-  helper: string;
-}) {
-  return (
-    <div className="flex min-w-0 items-center gap-4 rounded-xl border bg-card px-4 py-4 shadow-sm sm:px-5">
-      <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-accent text-primary [&_svg]:size-5">
-        <Icon aria-hidden="true" />
-      </span>
-      <div className="min-w-0">
-        <p className="text-2xl font-semibold tracking-tight tabular-nums text-foreground">
-          {value.toLocaleString()}
-        </p>
-        <p className="truncate text-sm font-medium text-foreground">{label}</p>
-        <p className="truncate text-xs text-muted-foreground">{helper}</p>
-      </div>
-    </div>
-  );
-}
-
-function ProjectIdentity({ name }: { name: string }) {
-  const initial = name.trim().charAt(0).toUpperCase() || "P";
-  return (
-    <div className="flex min-w-0 items-center gap-3">
-      <span
-        aria-hidden="true"
-        className="grid size-9 shrink-0 place-items-center rounded-lg bg-primary text-sm font-semibold text-primary-foreground shadow-sm"
-      >
-        {initial}
-      </span>
-      <span className="min-w-0 truncate font-medium text-foreground" title={name}>
-        {name}
-      </span>
-    </div>
-  );
-}
-
-function PhotoPreviewGroup({ item, large = false }: { item: FeedbackListItem; large?: boolean }) {
-  if (!item.photoCount) {
-    return <span className="text-sm text-muted-foreground">No photos</span>;
-  }
-
-  const visiblePhotos = item.photos.slice(0, large ? 4 : 3);
-  const remaining = Math.max(0, item.photoCount - visiblePhotos.length);
-
-  return (
-    <div className="flex items-center" aria-label={`${item.photoCount} attached ${item.photoCount === 1 ? "photo" : "photos"}`}>
-      <div className="flex [&>*+*]:-ml-2">
-        {visiblePhotos.map((photo, index) => (
-          <span
-            className={cn(
-              "relative block overflow-hidden rounded-md border-2 border-card bg-muted shadow-sm",
-              large ? "size-12" : "size-9"
-            )}
-            key={photo.id}
-            style={{ zIndex: visiblePhotos.length - index }}
-          >
-            <Image
-              alt={photo.originalFilename}
-              className="object-cover"
-              fill
-              sizes={large ? "48px" : "36px"}
-              src={photo.url}
-              unoptimized
-            />
-          </span>
-        ))}
-      </div>
-      {remaining ? (
-        <span className="ml-2 text-xs font-medium tabular-nums text-muted-foreground">+{remaining}</span>
-      ) : null}
-    </div>
-  );
-}
-
-function SortableHead({
-  field,
-  label,
-  query,
-  onSort,
-  className
-}: {
-  field: FeedbackSort;
-  label: string;
-  query: FeedbackQuery;
-  onSort: (field: FeedbackSort) => void;
-  className?: string;
-}) {
-  const active = query.sort === field;
-  const ariaSort = active ? (query.order === "asc" ? "ascending" : "descending") : "none";
-  const SortIcon = active ? (query.order === "asc" ? ArrowUp : ArrowDown) : ArrowDownUp;
-
-  return (
-    <TableHead aria-sort={ariaSort} className={className}>
-      <button
-        className="-ml-2 inline-flex min-h-9 items-center gap-1.5 rounded-md px-2 text-left transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        onClick={() => onSort(field)}
-        type="button"
-      >
-        {label}
-        <SortIcon aria-hidden="true" className={cn("size-3.5", active ? "text-primary" : "opacity-50")} />
-      </button>
-    </TableHead>
-  );
-}
-
-function EmptyFeedbackState({
-  hasFilters,
-  projects,
-  onClear
-}: {
-  hasFilters: boolean;
-  projects: ProjectOption[];
-  onClear: () => void;
-}) {
-  if (hasFilters) {
-    return (
-      <Empty className="min-h-80 border-0">
-        <EmptyHeader>
-          <EmptyMedia variant="icon">
-            <Search aria-hidden="true" />
-          </EmptyMedia>
-          <EmptyTitle>No matching feedback</EmptyTitle>
-          <EmptyDescription>
-            Try a broader search or remove one of the active filters.
-          </EmptyDescription>
-        </EmptyHeader>
-        <EmptyContent>
-          <Button onClick={onClear} type="button" variant="outline">
-            <X aria-hidden="true" data-icon="inline-start" />
-            Clear filters
-          </Button>
-        </EmptyContent>
-      </Empty>
-    );
-  }
-
-  if (!projects.length) {
-    return (
-      <Empty className="min-h-80 border-0">
-        <EmptyHeader>
-          <EmptyMedia variant="icon">
-            <FolderKanban aria-hidden="true" />
-          </EmptyMedia>
-          <EmptyTitle>Create your first project</EmptyTitle>
-          <EmptyDescription>
-            Feedback is kept inside projects so versions, notes, and photos stay together.
-          </EmptyDescription>
-        </EmptyHeader>
-        <EmptyContent>
-          <ProjectSheet
-            trigger={
-              <Button type="button">
-                <Plus aria-hidden="true" data-icon="inline-start" />
-                New project
-              </Button>
-            }
-          />
-        </EmptyContent>
-      </Empty>
-    );
-  }
-
-  return (
-    <Empty className="min-h-80 border-0">
-      <EmptyHeader>
-        <EmptyMedia variant="icon">
-          <MessageSquareText aria-hidden="true" />
-        </EmptyMedia>
-        <EmptyTitle>Add your first feedback</EmptyTitle>
-        <EmptyDescription>
-          Capture an observation, its project version, and any supporting photos.
-        </EmptyDescription>
-      </EmptyHeader>
-      <EmptyContent>
-        <FeedbackSheet
-          projects={projects}
-          trigger={
-            <Button type="button">
-              <Plus aria-hidden="true" data-icon="inline-start" />
-              New feedback
-            </Button>
-          }
-        />
-      </EmptyContent>
-    </Empty>
-  );
-}
 
 export function FeedbackDashboard({
   page,
   summary,
   projects,
   versions,
-  query
+  query,
 }: FeedbackDashboardProps) {
-  const router = useRouter();
-  const pathname = usePathname();
-  const [isNavigating, startNavigation] = useTransition();
-  const [searchValue, setSearchValue] = useState(query.q);
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
-  const [isExporting, setIsExporting] = useState(false);
-  const [isExportingFiltered, setIsExportingFiltered] = useState(false);
-  const [exportMessage, setExportMessage] = useState("");
-  const [exportError, setExportError] = useState("");
-
-  const updateQuery = useCallback(
-    (patch: QueryPatch, mode: "push" | "replace" = "push") => {
-      const params =
-        typeof window === "undefined"
-          ? searchParamsFromQuery(query)
-          : new URLSearchParams(window.location.search);
-
-      for (const [key, value] of Object.entries(patch)) {
-        if (value === undefined || value === "") params.delete(key);
-        else params.set(key, String(value));
-      }
-
-      const destination = params.size ? `${pathname}?${params.toString()}` : pathname;
-      startNavigation(() => {
-        if (mode === "replace") router.replace(destination, { scroll: false });
-        else router.push(destination, { scroll: false });
-      });
-    },
-    [pathname, query, router]
-  );
-
-  useEffect(() => {
-    if (searchValue === query.q) return;
-    const timeout = window.setTimeout(() => {
-      updateQuery({ q: searchValue.trim() || undefined, page: undefined }, "replace");
-    }, 350);
-    return () => window.clearTimeout(timeout);
-  }, [query.q, searchValue, updateQuery]);
-
-  const activeFilterCount = [
-    Boolean(query.q),
-    Boolean(query.project),
-    Boolean(query.version),
-    query.hasPhotos !== "all",
-    Boolean(query.from),
-    Boolean(query.to)
-  ].filter(Boolean).length;
-
-  const currentPageIds = useMemo(() => page.items.map((item) => item.id), [page.items]);
-  const selectedInVisibleOrder = useMemo(
-    () => currentPageIds.filter((id) => selectedIds.has(id)),
-    [currentPageIds, selectedIds]
-  );
-  const allCurrentPageSelected =
-    currentPageIds.length > 0 && selectedInVisibleOrder.length === currentPageIds.length;
-  const someCurrentPageSelected =
-    selectedInVisibleOrder.length > 0 && !allCurrentPageSelected;
-
-  const visiblePages = getVisiblePages(page.page, page.pageCount);
-  const firstVisibleResult = page.total ? (page.page - 1) * page.pageSize + 1 : 0;
-  const lastVisibleResult = Math.min(page.page * page.pageSize, page.total);
-
-  function clearFilters() {
-    setSearchValue("");
-    startNavigation(() => router.push(pathname, { scroll: false }));
-  }
-
-  function sortBy(field: FeedbackSort) {
-    const nextOrder: SortOrder = query.sort === field && query.order === "desc" ? "asc" : "desc";
-    updateQuery({ sort: field === "createdAt" ? undefined : field, order: nextOrder === "desc" ? undefined : nextOrder, page: undefined });
-  }
-
-  function toggleItem(id: string, checked: boolean) {
-    setExportError("");
-    setExportMessage("");
-    setSelectedIds((current) => {
-      const next = new Set(current);
-      if (checked) next.add(id);
-      else next.delete(id);
-      return next;
-    });
-  }
-
-  function toggleCurrentPage(checked: boolean) {
-    setExportError("");
-    setExportMessage("");
-    setSelectedIds(checked ? new Set(currentPageIds) : new Set());
-  }
-
-  async function downloadSelected() {
-    if (!selectedInVisibleOrder.length || isExporting) return;
-    setIsExporting(true);
-    setExportError("");
-    setExportMessage("");
-
-    try {
-      const response = await fetch("/api/feedback/export", {
-        body: JSON.stringify({ ids: selectedInVisibleOrder }),
-        headers: { "Content-Type": "application/json" },
-        method: "POST"
-      });
-
-      if (!response.ok) {
-        let message = "The selected feedback could not be exported. Please try again.";
-        try {
-          const body = (await response.json()) as { error?: { message?: string } };
-          if (body.error?.message) message = body.error.message;
-        } catch {
-          // Keep the actionable fallback when the server did not return JSON.
-        }
-        throw new Error(message);
-      }
-
-      const blob = await response.blob();
-      const objectUrl = URL.createObjectURL(blob);
-      const anchor = document.createElement("a");
-      anchor.href = objectUrl;
-      anchor.download = getExportFilename(response.headers.get("Content-Disposition"));
-      document.body.appendChild(anchor);
-      anchor.click();
-      anchor.remove();
-      window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1_000);
-      setExportMessage("Your PDF download has started.");
-    } catch (error) {
-      setExportError(
-        error instanceof Error
-          ? error.message
-          : "The selected feedback could not be exported. Please try again."
-      );
-    } finally {
-      setIsExporting(false);
-    }
-  }
-
-  async function downloadFiltered() {
-    if (!page.total || isExportingFiltered) return;
-    setIsExportingFiltered(true);
-
-    try {
-      const response = await fetch("/api/feedback/export", {
-        body: JSON.stringify({ query }),
-        headers: { "Content-Type": "application/json" },
-        method: "POST"
-      });
-
-      if (!response.ok) {
-        const body = (await response.json().catch(() => null)) as
-          | { error?: { message?: string } }
-          | null;
-        throw new Error(body?.error?.message || "The filtered feedback could not be exported.");
-      }
-
-      const blob = await response.blob();
-      const objectUrl = URL.createObjectURL(blob);
-      const anchor = document.createElement("a");
-      anchor.href = objectUrl;
-      anchor.download = getExportFilename(response.headers.get("Content-Disposition"));
-      document.body.appendChild(anchor);
-      anchor.click();
-      anchor.remove();
-      window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1_000);
-      toast.success(`${page.total} filtered ${page.total === 1 ? "record" : "records"} exported.`);
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "The filtered feedback could not be exported.");
-    } finally {
-      setIsExportingFiltered(false);
-    }
-  }
-
-  function handleSearchChange(event: ChangeEvent<HTMLInputElement>) {
-    setSearchValue(event.target.value);
-  }
+  const {
+    isNavigating,
+    searchValue,
+    setSearchValue,
+    selectedIds,
+    setSelectedIds,
+    isExporting,
+    isExportingFiltered,
+    exportMessage,
+    exportError,
+    updateQuery,
+    activeFilterCount,
+    selectedInVisibleOrder,
+    allCurrentPageSelected,
+    someCurrentPageSelected,
+    visiblePages,
+    firstVisibleResult,
+    lastVisibleResult,
+    clearFilters,
+    sortBy,
+    toggleItem,
+    toggleCurrentPage,
+    downloadSelected,
+    downloadFiltered,
+    handleSearchChange,
+  } = useFeedbackDashboard(page, query);
 
   return (
     <div className="flex min-w-0 flex-col gap-6 pb-6">
@@ -522,7 +125,11 @@ export function FeedbackDashboard({
         <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center">
           <ProjectSheet
             trigger={
-              <Button className="w-full sm:w-auto" type="button" variant="outline">
+              <Button
+                className="w-full sm:w-auto"
+                type="button"
+                variant="outline"
+              >
                 <FolderKanban aria-hidden="true" data-icon="inline-start" />
                 New project
               </Button>
@@ -534,7 +141,11 @@ export function FeedbackDashboard({
               <Button
                 className="w-full sm:w-auto"
                 disabled={!projects.length}
-                title={projects.length ? undefined : "Create a project before adding feedback"}
+                title={
+                  projects.length
+                    ? undefined
+                    : "Create a project before adding feedback"
+                }
                 type="button"
               >
                 <Plus aria-hidden="true" data-icon="inline-start" />
@@ -545,7 +156,10 @@ export function FeedbackDashboard({
         </div>
       </header>
 
-      <section aria-label="Feedback summary" className="grid gap-3 sm:grid-cols-3">
+      <section
+        aria-label="Feedback summary"
+        className="grid gap-3 sm:grid-cols-3"
+      >
         <MetricCard
           helper="Across every project"
           icon={MessageSquareText}
@@ -574,19 +188,28 @@ export function FeedbackDashboard({
         <div className="border-b px-4 py-4 sm:px-5 sm:py-5">
           <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
             <div>
-              <h2 className="font-semibold text-foreground" id="feedback-list-heading">
+              <h2
+                className="font-semibold text-foreground"
+                id="feedback-list-heading"
+              >
                 Feedback records
               </h2>
-              <p className="mt-1 text-sm text-muted-foreground" aria-live="polite">
-                Showing {firstVisibleResult.toLocaleString()}–{lastVisibleResult.toLocaleString()} of{" "}
-                {page.total.toLocaleString()} {page.total === 1 ? "record" : "records"}
+              <p
+                className="mt-1 text-sm text-muted-foreground"
+                aria-live="polite"
+              >
+                Showing {firstVisibleResult.toLocaleString()}–
+                {lastVisibleResult.toLocaleString()} of{" "}
+                {page.total.toLocaleString()}{" "}
+                {page.total === 1 ? "record" : "records"}
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
               {activeFilterCount ? (
                 <Badge className="gap-1.5 py-1" variant="secondary">
                   <SlidersHorizontal aria-hidden="true" className="size-3" />
-                  {activeFilterCount} active {activeFilterCount === 1 ? "filter" : "filters"}
+                  {activeFilterCount} active{" "}
+                  {activeFilterCount === 1 ? "filter" : "filters"}
                 </Badge>
               ) : null}
               <Button
@@ -597,7 +220,11 @@ export function FeedbackDashboard({
                 variant="outline"
               >
                 {isExportingFiltered ? (
-                  <Loader2 aria-hidden="true" className="animate-spin" data-icon="inline-start" />
+                  <Loader2
+                    aria-hidden="true"
+                    className="animate-spin"
+                    data-icon="inline-start"
+                  />
                 ) : (
                   <FileDown aria-hidden="true" data-icon="inline-start" />
                 )}
@@ -645,7 +272,7 @@ export function FeedbackDashboard({
                   updateQuery({
                     project: value === ALL_PROJECTS ? undefined : value,
                     version: undefined,
-                    page: undefined
+                    page: undefined,
                   })
                 }
                 value={query.project || ALL_PROJECTS}
@@ -673,7 +300,10 @@ export function FeedbackDashboard({
               <Select
                 disabled={isNavigating}
                 onValueChange={(value) =>
-                  updateQuery({ version: value === ALL_VERSIONS ? undefined : value, page: undefined })
+                  updateQuery({
+                    version: value === ALL_VERSIONS ? undefined : value,
+                    page: undefined,
+                  })
                 }
                 value={query.version || ALL_VERSIONS}
               >
@@ -700,7 +330,10 @@ export function FeedbackDashboard({
               <Select
                 disabled={isNavigating}
                 onValueChange={(value) =>
-                  updateQuery({ hasPhotos: value === "all" ? undefined : value, page: undefined })
+                  updateQuery({
+                    hasPhotos: value === "all" ? undefined : value,
+                    page: undefined,
+                  })
                 }
                 value={query.hasPhotos}
               >
@@ -728,40 +361,64 @@ export function FeedbackDashboard({
                 Clear filters
               </Button>
             ) : (
-              <div aria-hidden="true" className="hidden xl:col-span-2 xl:block" />
+              <div
+                aria-hidden="true"
+                className="hidden xl:col-span-2 xl:block"
+              />
             )}
           </div>
 
           <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(0,12rem)_minmax(0,12rem)_minmax(0,12rem)_auto] xl:justify-end">
-            <label className="flex flex-col gap-1.5 text-xs font-medium text-muted-foreground" htmlFor="created-from">
+            <label
+              className="flex flex-col gap-1.5 text-xs font-medium text-muted-foreground"
+              htmlFor="created-from"
+            >
               Created from
               <Input
                 className="h-10"
                 disabled={isNavigating}
                 id="created-from"
                 max={query.to || undefined}
-                onChange={(event) => updateQuery({ from: event.target.value || undefined, page: undefined })}
+                onChange={(event) =>
+                  updateQuery({
+                    from: event.target.value || undefined,
+                    page: undefined,
+                  })
+                }
                 type="date"
                 value={query.from}
               />
             </label>
-            <label className="flex flex-col gap-1.5 text-xs font-medium text-muted-foreground" htmlFor="created-to">
+            <label
+              className="flex flex-col gap-1.5 text-xs font-medium text-muted-foreground"
+              htmlFor="created-to"
+            >
               Created to
               <Input
                 className="h-10"
                 disabled={isNavigating}
                 id="created-to"
                 min={query.from || undefined}
-                onChange={(event) => updateQuery({ to: event.target.value || undefined, page: undefined })}
+                onChange={(event) =>
+                  updateQuery({
+                    to: event.target.value || undefined,
+                    page: undefined,
+                  })
+                }
                 type="date"
                 value={query.to}
               />
             </label>
-            <label className="flex flex-col gap-1.5 text-xs font-medium text-muted-foreground xl:hidden" htmlFor="mobile-sort">
+            <label
+              className="flex flex-col gap-1.5 text-xs font-medium text-muted-foreground xl:hidden"
+              htmlFor="mobile-sort"
+            >
               Sort by
               <Select
                 disabled={isNavigating}
-                onValueChange={(value) => updateQuery({ sort: value, page: undefined })}
+                onValueChange={(value) =>
+                  updateQuery({ sort: value, page: undefined })
+                }
                 value={query.sort}
               >
                 <SelectTrigger className="h-10" id="mobile-sort">
@@ -781,11 +438,20 @@ export function FeedbackDashboard({
               aria-label={`Sort ${query.order === "asc" ? "descending" : "ascending"}`}
               className="mt-auto xl:hidden"
               disabled={isNavigating}
-              onClick={() => updateQuery({ order: query.order === "asc" ? undefined : "asc", page: undefined })}
+              onClick={() =>
+                updateQuery({
+                  order: query.order === "asc" ? undefined : "asc",
+                  page: undefined,
+                })
+              }
               type="button"
               variant="outline"
             >
-              {query.order === "asc" ? <ArrowUp aria-hidden="true" /> : <ArrowDown aria-hidden="true" />}
+              {query.order === "asc" ? (
+                <ArrowUp aria-hidden="true" />
+              ) : (
+                <ArrowDown aria-hidden="true" />
+              )}
               {query.order === "asc" ? "Ascending" : "Descending"}
             </Button>
           </div>
@@ -795,7 +461,9 @@ export function FeedbackDashboard({
           <div className="flex flex-col gap-3 border-b border-primary/20 bg-accent/60 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-5">
             <div className="min-w-0">
               <p className="text-sm font-medium text-foreground">
-                {selectedInVisibleOrder.length} {selectedInVisibleOrder.length === 1 ? "record" : "records"} selected
+                {selectedInVisibleOrder.length}{" "}
+                {selectedInVisibleOrder.length === 1 ? "record" : "records"}{" "}
+                selected
               </p>
               {exportError ? (
                 <p className="mt-1 text-sm text-destructive" role="alert">
@@ -822,15 +490,29 @@ export function FeedbackDashboard({
                 ids={selectedInVisibleOrder}
                 onDeleted={() => setSelectedIds(new Set())}
                 trigger={
-                  <Button disabled={isExporting} size="sm" type="button" variant="destructive">
+                  <Button
+                    disabled={isExporting}
+                    size="sm"
+                    type="button"
+                    variant="destructive"
+                  >
                     <Trash2 aria-hidden="true" data-icon="inline-start" />
                     Delete selected
                   </Button>
                 }
               />
-              <Button disabled={isExporting} onClick={downloadSelected} size="sm" type="button">
+              <Button
+                disabled={isExporting}
+                onClick={downloadSelected}
+                size="sm"
+                type="button"
+              >
                 {isExporting ? (
-                  <Loader2 aria-hidden="true" className="animate-spin" data-icon="inline-start" />
+                  <Loader2
+                    aria-hidden="true"
+                    className="animate-spin"
+                    data-icon="inline-start"
+                  />
                 ) : (
                   <FileDown aria-hidden="true" data-icon="inline-start" />
                 )}
@@ -841,7 +523,11 @@ export function FeedbackDashboard({
         ) : null}
 
         {!page.items.length ? (
-          <EmptyFeedbackState hasFilters={Boolean(activeFilterCount)} onClear={clearFilters} projects={projects} />
+          <EmptyFeedbackState
+            hasFilters={Boolean(activeFilterCount)}
+            onClear={clearFilters}
+            projects={projects}
+          />
         ) : (
           <>
             <div className="hidden min-w-0 xl:block">
@@ -859,16 +545,40 @@ export function FeedbackDashboard({
                                 ? "indeterminate"
                                 : false
                           }
-                          onCheckedChange={(checked) => toggleCurrentPage(checked === true)}
+                          onCheckedChange={(checked) =>
+                            toggleCurrentPage(checked === true)
+                          }
                         />
                       </span>
                     </TableHead>
-                    <SortableHead field="project" label="Project" onSort={sortBy} query={query} />
-                    <SortableHead field="version" label="Version" onSort={sortBy} query={query} />
+                    <SortableHead
+                      field="project"
+                      label="Project"
+                      onSort={sortBy}
+                      query={query}
+                    />
+                    <SortableHead
+                      field="version"
+                      label="Version"
+                      onSort={sortBy}
+                      query={query}
+                    />
                     <TableHead className="min-w-64">Feedback</TableHead>
                     <TableHead className="w-36">Photos</TableHead>
-                    <SortableHead className="w-44" field="createdAt" label="Created" onSort={sortBy} query={query} />
-                    <SortableHead className="w-44" field="updatedAt" label="Updated" onSort={sortBy} query={query} />
+                    <SortableHead
+                      className="w-44"
+                      field="createdAt"
+                      label="Created"
+                      onSort={sortBy}
+                      query={query}
+                    />
+                    <SortableHead
+                      className="w-44"
+                      field="updatedAt"
+                      label="Updated"
+                      onSort={sortBy}
+                      query={query}
+                    />
                     <TableHead className="w-28 text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -876,13 +586,18 @@ export function FeedbackDashboard({
                   {page.items.map((item) => {
                     const selected = selectedIds.has(item.id);
                     return (
-                      <TableRow data-state={selected ? "selected" : undefined} key={item.id}>
+                      <TableRow
+                        data-state={selected ? "selected" : undefined}
+                        key={item.id}
+                      >
                         <TableCell className="px-3">
                           <span className="inline-flex size-8 items-center justify-center">
                             <Checkbox
                               aria-label={`Select feedback for ${item.projectName}, version ${item.projectVersion}`}
                               checked={selected}
-                              onCheckedChange={(checked) => toggleItem(item.id, checked === true)}
+                              onCheckedChange={(checked) =>
+                                toggleItem(item.id, checked === true)
+                              }
                             />
                           </span>
                         </TableCell>
@@ -890,7 +605,10 @@ export function FeedbackDashboard({
                           <ProjectIdentity name={item.projectName} />
                         </TableCell>
                         <TableCell>
-                          <Badge className="font-mono font-medium" variant="secondary">
+                          <Badge
+                            className="font-mono font-medium"
+                            variant="secondary"
+                          >
                             {item.projectVersion}
                           </Badge>
                         </TableCell>
@@ -906,20 +624,53 @@ export function FeedbackDashboard({
                           <PhotoPreviewGroup item={item} />
                         </TableCell>
                         <TableCell>
-                          <LocalDateTime className="text-xs leading-5 text-muted-foreground" value={item.createdAt} />
+                          <LocalDateTime
+                            className="text-xs leading-5 text-muted-foreground"
+                            value={item.createdAt}
+                          />
                         </TableCell>
                         <TableCell>
-                          <LocalDateTime className="text-xs leading-5 text-muted-foreground" value={item.updatedAt} />
+                          <LocalDateTime
+                            className="text-xs leading-5 text-muted-foreground"
+                            value={item.updatedAt}
+                          />
                         </TableCell>
                         <TableCell>
                           <div className="flex justify-end gap-1">
-                            <Button asChild size="icon-sm" title="View feedback" variant="ghost">
-                              <Link aria-label={`View feedback for ${item.projectName}, version ${item.projectVersion}`} href={`/feedback/${item.id}`} prefetch={false}>
+                            <Button
+                              asChild
+                              size="icon-sm"
+                              title="View feedback"
+                              variant="ghost"
+                            >
+                              <Link
+                                aria-label={`View feedback for ${item.projectName}, version ${item.projectVersion}`}
+                                href={`/feedback/${item.id}`}
+                                prefetch={false}
+                              >
                                 <Eye aria-hidden="true" />
                               </Link>
                             </Button>
-                            <EditFeedbackSheet feedback={item} trigger={<Button aria-label={`Edit feedback for ${item.projectName}, version ${item.projectVersion}`} size="icon-sm" title="Edit feedback" type="button" variant="ghost"><Pencil aria-hidden="true" /></Button>} />
-                            <Button asChild size="icon-sm" title="Download PDF" variant="ghost">
+                            <EditFeedbackSheet
+                              feedback={item}
+                              trigger={
+                                <Button
+                                  aria-label={`Edit feedback for ${item.projectName}, version ${item.projectVersion}`}
+                                  size="icon-sm"
+                                  title="Edit feedback"
+                                  type="button"
+                                  variant="ghost"
+                                >
+                                  <Pencil aria-hidden="true" />
+                                </Button>
+                              }
+                            />
+                            <Button
+                              asChild
+                              size="icon-sm"
+                              title="Download PDF"
+                              variant="ghost"
+                            >
                               <a
                                 aria-label={`Download PDF for ${item.projectName}, version ${item.projectVersion}`}
                                 download
@@ -963,12 +714,15 @@ export function FeedbackDashboard({
                           : false
                     }
                     className="size-5"
-                    onCheckedChange={(checked) => toggleCurrentPage(checked === true)}
+                    onCheckedChange={(checked) =>
+                      toggleCurrentPage(checked === true)
+                    }
                   />
                   Select this page
                 </label>
                 <span className="text-xs tabular-nums text-muted-foreground">
-                  {page.items.length} {page.items.length === 1 ? "item" : "items"}
+                  {page.items.length}{" "}
+                  {page.items.length === 1 ? "item" : "items"}
                 </span>
               </div>
               {page.items.map((item) => {
@@ -977,7 +731,7 @@ export function FeedbackDashboard({
                   <article
                     className={cn(
                       "p-4 transition-colors sm:p-5 [content-visibility:auto]",
-                      selected ? "bg-accent/55" : "bg-card"
+                      selected ? "bg-accent/55" : "bg-card",
                     )}
                     key={item.id}
                   >
@@ -987,13 +741,18 @@ export function FeedbackDashboard({
                           aria-label={`Select feedback for ${item.projectName}, version ${item.projectVersion}`}
                           checked={selected}
                           className="size-5"
-                          onCheckedChange={(checked) => toggleItem(item.id, checked === true)}
+                          onCheckedChange={(checked) =>
+                            toggleItem(item.id, checked === true)
+                          }
                         />
                       </label>
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center justify-between gap-2">
                           <ProjectIdentity name={item.projectName} />
-                          <Badge className="font-mono font-medium" variant="secondary">
+                          <Badge
+                            className="font-mono font-medium"
+                            variant="secondary"
+                          >
                             {item.projectVersion}
                           </Badge>
                         </div>
@@ -1009,24 +768,55 @@ export function FeedbackDashboard({
                         </div>
                         <div className="mt-4 grid grid-cols-2 gap-2">
                           <Button asChild size="sm" variant="outline">
-                            <Link href={`/feedback/${item.id}`} prefetch={false}>
-                              <Eye aria-hidden="true" data-icon="inline-start" />
+                            <Link
+                              href={`/feedback/${item.id}`}
+                              prefetch={false}
+                            >
+                              <Eye
+                                aria-hidden="true"
+                                data-icon="inline-start"
+                              />
                               View
                             </Link>
                           </Button>
-                          <EditFeedbackSheet feedback={item} trigger={<Button size="sm" type="button" variant="outline"><Pencil aria-hidden="true" data-icon="inline-start" />Edit</Button>} />
+                          <EditFeedbackSheet
+                            feedback={item}
+                            trigger={
+                              <Button size="sm" type="button" variant="outline">
+                                <Pencil
+                                  aria-hidden="true"
+                                  data-icon="inline-start"
+                                />
+                                Edit
+                              </Button>
+                            }
+                          />
                           <DeleteFeedbackDialog
                             ids={[item.id]}
                             trigger={
-                              <Button className="col-span-2" size="sm" type="button" variant="outline">
-                                <Trash2 aria-hidden="true" data-icon="inline-start" />
+                              <Button
+                                className="col-span-2"
+                                size="sm"
+                                type="button"
+                                variant="outline"
+                              >
+                                <Trash2
+                                  aria-hidden="true"
+                                  data-icon="inline-start"
+                                />
                                 Delete
                               </Button>
                             }
                           />
                           <Button asChild size="sm" variant="outline">
-                            <a download href={`/api/feedback/${item.id}/export`}>
-                              <Download aria-hidden="true" data-icon="inline-start" />
+                            <a
+                              download
+                              href={`/api/feedback/${item.id}/export`}
+                            >
+                              <Download
+                                aria-hidden="true"
+                                data-icon="inline-start"
+                              />
                               PDF
                             </a>
                           </Button>
@@ -1045,7 +835,12 @@ export function FeedbackDashboard({
             <span>Rows per page</span>
             <Select
               disabled={isNavigating}
-              onValueChange={(value) => updateQuery({ pageSize: value === "25" ? undefined : value, page: undefined })}
+              onValueChange={(value) =>
+                updateQuery({
+                  pageSize: value === "25" ? undefined : value,
+                  page: undefined,
+                })
+              }
               value={String(page.pageSize)}
             >
               <SelectTrigger aria-label="Rows per page" className="h-9 w-20">
@@ -1063,11 +858,18 @@ export function FeedbackDashboard({
             </Select>
           </div>
 
-          <nav aria-label="Feedback pagination" className="flex items-center justify-between gap-2 sm:justify-end">
+          <nav
+            aria-label="Feedback pagination"
+            className="flex items-center justify-between gap-2 sm:justify-end"
+          >
             <Button
               aria-label="Previous page"
               disabled={page.page <= 1 || isNavigating}
-              onClick={() => updateQuery({ page: page.page - 1 === 1 ? undefined : page.page - 1 })}
+              onClick={() =>
+                updateQuery({
+                  page: page.page - 1 === 1 ? undefined : page.page - 1,
+                })
+              }
               size="icon-sm"
               type="button"
               variant="outline"
@@ -1080,7 +882,11 @@ export function FeedbackDashboard({
                   aria-current={pageNumber === page.page ? "page" : undefined}
                   aria-label={`Page ${pageNumber}`}
                   key={pageNumber}
-                  onClick={() => updateQuery({ page: pageNumber === 1 ? undefined : pageNumber })}
+                  onClick={() =>
+                    updateQuery({
+                      page: pageNumber === 1 ? undefined : pageNumber,
+                    })
+                  }
                   size="icon-sm"
                   type="button"
                   variant={pageNumber === page.page ? "default" : "ghost"}

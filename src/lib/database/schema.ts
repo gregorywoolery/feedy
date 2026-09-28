@@ -18,10 +18,9 @@ import {
 import { getDatabaseSchema } from "@/lib/database/config";
 
 const databaseSchema = getDatabaseSchema();
-const applicationTable =
-  (databaseSchema === "public"
-    ? pgTable
-    : pgSchema(databaseSchema).table) as PgTableFn<string | undefined>;
+const applicationTable = (
+  databaseSchema === "public" ? pgTable : pgSchema(databaseSchema).table
+) as PgTableFn<string | undefined>;
 
 const bytea = customType<{ data: Buffer }>({
   dataType() {
@@ -138,10 +137,7 @@ export const feedbackPhotos = applicationTable(
       "feedback_photos_height_check",
       sql`${table.height} is null or ${table.height} > 0`,
     ),
-    check(
-      "feedback_photos_sort_order_check",
-      sql`${table.sortOrder} >= 0`,
-    ),
+    check("feedback_photos_sort_order_check", sql`${table.sortOrder} >= 0`),
   ],
 );
 
@@ -166,6 +162,14 @@ export const photoObjects = applicationTable(
     ),
   ],
 );
+
+export const photoCleanupJobs = applicationTable("photo_cleanup_jobs", {
+  storageKey: text("storage_key").primaryKey(),
+  storageNamespace: text("storage_namespace").notNull(),
+  createdAt: timestamp("created_at", { mode: "date", withTimezone: true })
+    .defaultNow()
+    .notNull(),
+});
 
 export const projectsRelations = relations(projects, ({ many }) => ({
   feedbackItems: many(feedbackItems),

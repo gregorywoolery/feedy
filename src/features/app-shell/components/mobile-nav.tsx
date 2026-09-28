@@ -1,9 +1,9 @@
-"use client"
+"use client";
 
-import { Database, Menu } from "lucide-react"
-import * as React from "react"
+import { Database, Menu } from "lucide-react";
+import * as React from "react";
 
-import { Button } from "@/components/ui/button"
+import { Button } from "@/components/ui/button";
 import {
   Sheet,
   SheetBody,
@@ -12,13 +12,13 @@ import {
   SheetHeader,
   SheetTitle,
   SheetTrigger,
-} from "@/components/ui/sheet"
-import { FeedyBrand } from "@/features/app-shell/components/feedy-brand"
-import { NavigationLinks } from "@/features/app-shell/components/navigation"
-import { RecentProjects } from "@/features/app-shell/components/recent-projects"
+} from "@/components/ui/sheet";
+import { FeedyBrand } from "@/features/app-shell/components/feedy-brand";
+import { NavigationLinks } from "@/features/app-shell/components/navigation";
+import { RecentProjects } from "@/features/app-shell/components/recent-projects";
 
 export function MobileNav() {
-  const [open, setOpen] = React.useState(false)
+  const [open, setOpen] = React.useState(false);
 
   return (
     <header className="sticky top-0 z-40 flex h-16 items-center justify-between border-b bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/80 sm:px-6 lg:hidden">
@@ -55,5 +55,5 @@ export function MobileNav() {
         </SheetContent>
       </Sheet>
     </header>
-  )
+  );
 }

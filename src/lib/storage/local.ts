@@ -5,36 +5,19 @@ import path from "node:path";
 import type { PhotoStorage } from "@/lib/storage/types";
 
 const DEFAULT_UPLOAD_DIRECTORY = path.join(process.cwd(), "data", "uploads");
-const STORAGE_KEY_PATTERN = /^[a-f0-9]{64}\.(?:jpg|png|webp)$/;
-const MAX_KEY_GENERATION_ATTEMPTS = 4;
-
-const extensionByMimeType = {
-  "image/jpeg": "jpg",
-  "image/png": "png",
-  "image/webp": "webp",
-} as const;
-
-const mimeTypeByExtension = {
-  jpg: "image/jpeg",
-  png: "image/png",
-  webp: "image/webp",
-} as const;
-
-type SupportedMimeType = keyof typeof extensionByMimeType;
-
-export class UnsupportedPhotoMimeTypeError extends Error {
-  constructor(mimeType: string) {
-    super(`Unsupported photo MIME type: ${mimeType || "(empty)"}.`);
-    this.name = "UnsupportedPhotoMimeTypeError";
-  }
-}
-
-export class InvalidStorageKeyError extends Error {
-  constructor() {
-    super("The photo storage key is invalid.");
-    this.name = "InvalidStorageKeyError";
-  }
-}
+import {
+  STORAGE_KEY_PATTERN,
+  MAX_KEY_GENERATION_ATTEMPTS,
+  extensionByMimeType,
+  mimeTypeByExtension,
+  UnsupportedPhotoMimeTypeError,
+  InvalidStorageKeyError,
+  type SupportedMimeType,
+} from "./shared";
+export {
+  UnsupportedPhotoMimeTypeError,
+  InvalidStorageKeyError,
+} from "./shared";
 
 export interface LocalPhotoStorageOptions {
   uploadDir?: string;
@@ -46,7 +29,10 @@ function isNodeError(error: unknown): error is NodeJS.ErrnoException {
 
 function isInside(parent: string, candidate: string): boolean {
   const relative = path.relative(parent, candidate);
-  return relative === "" || (!relative.startsWith("..") && !path.isAbsolute(relative));
+  return (
+    relative === "" ||
+    (!relative.startsWith("..") && !path.isAbsolute(relative))
+  );
 }
 
 function validateUploadDirectory(uploadDir: string): string {
@@ -84,6 +70,10 @@ export class LocalPhotoStorage implements PhotoStorage {
         process.env.UPLOAD_DIR?.trim() ||
         DEFAULT_UPLOAD_DIRECTORY,
     );
+  }
+
+  get namespace() {
+    return `local:${this.uploadDir}`;
   }
 
   async put(input: {
@@ -130,6 +120,8 @@ export class LocalPhotoStorage implements PhotoStorage {
       throw new InvalidStorageKeyError();
     }
 
+    if (file.size > 10 * 1024 * 1024)
+      throw new Error("Stored photo exceeds the size limit.");
     const bytes = await readFile(source);
     return {
       bytes: new Uint8Array(bytes),

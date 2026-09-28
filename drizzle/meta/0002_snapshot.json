@@ -1,0 +1,486 @@
+{
+  "id": "8e538eb5-8325-4323-9f64-6d1a1ce302a1",
+  "prevId": "55613df1-8e0d-4c5f-8780-a1efcb300455",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.feedback_items": {
+      "name": "feedback_items",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "project_id": {
+          "name": "project_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "project_version": {
+          "name": "project_version",
+          "type": "varchar(80)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "feedback_items_project_created_at_idx": {
+          "name": "feedback_items_project_created_at_idx",
+          "columns": [
+            {
+              "expression": "project_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": false,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "feedback_items_project_version_idx": {
+          "name": "feedback_items_project_version_idx",
+          "columns": [
+            {
+              "expression": "project_version",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "feedback_items_created_at_idx": {
+          "name": "feedback_items_created_at_idx",
+          "columns": [
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": false,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "feedback_items_updated_at_idx": {
+          "name": "feedback_items_updated_at_idx",
+          "columns": [
+            {
+              "expression": "updated_at",
+              "isExpression": false,
+              "asc": false,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "feedback_items_project_id_projects_id_fk": {
+          "name": "feedback_items_project_id_projects_id_fk",
+          "tableFrom": "feedback_items",
+          "tableTo": "projects",
+          "columnsFrom": [
+            "project_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "feedback_items_project_version_not_blank_check": {
+          "name": "feedback_items_project_version_not_blank_check",
+          "value": "char_length(btrim(\"feedback_items\".\"project_version\")) between 1 and 80"
+        },
+        "feedback_items_description_length_check": {
+          "name": "feedback_items_description_length_check",
+          "value": "char_length(btrim(\"feedback_items\".\"description\")) between 1 and 10000"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.feedback_photos": {
+      "name": "feedback_photos",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "feedback_id": {
+          "name": "feedback_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "storage_key": {
+          "name": "storage_key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "original_filename": {
+          "name": "original_filename",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "mime_type": {
+          "name": "mime_type",
+          "type": "varchar(80)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "size_bytes": {
+          "name": "size_bytes",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "width": {
+          "name": "width",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "height": {
+          "name": "height",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "sort_order": {
+          "name": "sort_order",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "feedback_photos_storage_key_idx": {
+          "name": "feedback_photos_storage_key_idx",
+          "columns": [
+            {
+              "expression": "storage_key",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "feedback_photos_feedback_id_sort_order_idx": {
+          "name": "feedback_photos_feedback_id_sort_order_idx",
+          "columns": [
+            {
+              "expression": "feedback_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "sort_order",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "feedback_photos_feedback_id_feedback_items_id_fk": {
+          "name": "feedback_photos_feedback_id_feedback_items_id_fk",
+          "tableFrom": "feedback_photos",
+          "tableTo": "feedback_items",
+          "columnsFrom": [
+            "feedback_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "feedback_photos_feedback_id_sort_order_unique": {
+          "name": "feedback_photos_feedback_id_sort_order_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "feedback_id",
+            "sort_order"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "feedback_photos_original_filename_not_blank_check": {
+          "name": "feedback_photos_original_filename_not_blank_check",
+          "value": "char_length(btrim(\"feedback_photos\".\"original_filename\")) between 1 and 255"
+        },
+        "feedback_photos_mime_type_check": {
+          "name": "feedback_photos_mime_type_check",
+          "value": "\"feedback_photos\".\"mime_type\" in ('image/jpeg', 'image/png', 'image/webp')"
+        },
+        "feedback_photos_size_bytes_check": {
+          "name": "feedback_photos_size_bytes_check",
+          "value": "\"feedback_photos\".\"size_bytes\" between 1 and 10485760"
+        },
+        "feedback_photos_width_check": {
+          "name": "feedback_photos_width_check",
+          "value": "\"feedback_photos\".\"width\" is null or \"feedback_photos\".\"width\" > 0"
+        },
+        "feedback_photos_height_check": {
+          "name": "feedback_photos_height_check",
+          "value": "\"feedback_photos\".\"height\" is null or \"feedback_photos\".\"height\" > 0"
+        },
+        "feedback_photos_sort_order_check": {
+          "name": "feedback_photos_sort_order_check",
+          "value": "\"feedback_photos\".\"sort_order\" >= 0"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.photo_cleanup_jobs": {
+      "name": "photo_cleanup_jobs",
+      "schema": "",
+      "columns": {
+        "storage_key": {
+          "name": "storage_key",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "storage_namespace": {
+          "name": "storage_namespace",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.photo_objects": {
+      "name": "photo_objects",
+      "schema": "",
+      "columns": {
+        "key": {
+          "name": "key",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "bytes": {
+          "name": "bytes",
+          "type": "bytea",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "mime_type": {
+          "name": "mime_type",
+          "type": "varchar(80)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "photo_objects_key_check": {
+          "name": "photo_objects_key_check",
+          "value": "\"photo_objects\".\"key\" ~ '^[a-f0-9]{64}\\.(jpg|png|webp)$'"
+        },
+        "photo_objects_mime_type_check": {
+          "name": "photo_objects_mime_type_check",
+          "value": "\"photo_objects\".\"mime_type\" in ('image/jpeg', 'image/png', 'image/webp')"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.projects": {
+      "name": "projects",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "name": {
+          "name": "name",
+          "type": "varchar(160)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "projects_name_lower_idx": {
+          "name": "projects_name_lower_idx",
+          "columns": [
+            {
+              "expression": "lower(\"name\")",
+              "asc": true,
+              "isExpression": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "projects_updated_at_idx": {
+          "name": "projects_updated_at_idx",
+          "columns": [
+            {
+              "expression": "updated_at",
+              "isExpression": false,
+              "asc": false,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "projects_name_not_blank_check": {
+          "name": "projects_name_not_blank_check",
+          "value": "char_length(btrim(\"projects\".\"name\")) between 1 and 160"
+        },
+        "projects_description_length_check": {
+          "name": "projects_description_length_check",
+          "value": "\"projects\".\"description\" is null or char_length(\"projects\".\"description\") <= 4000"
+        }
+      },
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {},
+  "schemas": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}

@@ -8,7 +8,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: { default: "Feedy", template: "%s · Feedy" },
-  description: "Capture, review, filter, and export project feedback."
+  description: "Capture, review, filter, and export project feedback.",
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {

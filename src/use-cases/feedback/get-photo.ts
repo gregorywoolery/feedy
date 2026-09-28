@@ -1,13 +1,15 @@
-import { getPhotoStorageRecord } from "@/data-access/feedback/feedback-repository";
-import { getPhotoStorage } from "@/lib/storage";
+import type { ApplicationDependencies } from "@/use-cases/ports";
 
-export async function getPhotoUseCase(photoId: string) {
-  const record = await getPhotoStorageRecord(photoId);
+export async function getPhotoUseCase(
+  photoId: string,
+  dependencies: ApplicationDependencies,
+) {
+  const record = await dependencies.feedback.getPhotoStorageRecord(photoId);
   if (!record) return null;
-  const stored = await getPhotoStorage().get(record.storageKey);
+  const stored = await dependencies.storage.get(record.storageKey);
   return {
     ...record,
     bytes: stored.bytes,
-    mimeType: record.mimeType
+    mimeType: record.mimeType,
   };
 }

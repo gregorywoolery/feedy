@@ -1,8 +1,7 @@
-import { createFeedbackRecord, getFeedbackById } from "@/data-access/feedback/feedback-repository";
-import { projectExists } from "@/data-access/projects/project-repository";
-import { getPhotoStorage } from "@/lib/storage";
+import { presentFeedback } from "@/use-cases/present-feedback";
+import type { StoredPhotoInput } from "@/entities/photos";
+import type { ApplicationDependencies } from "@/use-cases/ports";
 import { createFeedbackFieldsSchema } from "@/lib/validation/feedback";
-import { validateAndNormalizePhotos } from "@/lib/validation/photos";
 
 export class ProjectNotFoundError extends Error {
   constructor() {
@@ -11,34 +10,50 @@ export class ProjectNotFoundError extends Error {
   }
 }
 
-export async function createFeedbackUseCase(input: {
-  projectId: unknown;
-  projectVersion: unknown;
-  description: unknown;
-  photos: File[];
-}) {
+export async function createFeedbackUseCase(
+  input: {
+    projectId: unknown;
+    projectVersion: unknown;
+    description: unknown;
+    photos: File[];
+  },
+  dependencies: ApplicationDependencies,
+) {
   const fields = createFeedbackFieldsSchema.parse({
     projectId: input.projectId,
     projectVersion: input.projectVersion,
-    description: input.description
+    description: input.description,
   });
-  if (!(await projectExists(fields.projectId))) throw new ProjectNotFoundError();
+  if (!(await dependencies.projects.projectExists(fields.projectId)))
+    throw new ProjectNotFoundError();
 
-  const photos = await validateAndNormalizePhotos(input.photos);
-  const storage = getPhotoStorage();
-  const stored: Array<(typeof photos)[number] & { storageKey: string; sortOrder: number }> = [];
+  const photos = await dependencies.normalizePhotos(input.photos);
+  const storage = dependencies.storage;
+  const stored: StoredPhotoInput[] = [];
 
+  let feedbackId: string;
   try {
     for (let index = 0; index < photos.length; index += 1) {
       const photo = photos[index];
-      const result = await storage.put({ bytes: photo.bytes, mimeType: photo.mimeType });
-      stored.push({ ...photo, storageKey: result.key, sortOrder: index });
+      const result = await storage.put({
+        bytes: photo.bytes,
+        mimeType: photo.mimeType,
+      });
+      const { originalFilename, mimeType, sizeBytes, width, height } = photo;
+      const metadata = { originalFilename, mimeType, sizeBytes, width, height };
+      stored.push({ ...metadata, storageKey: result.key, sortOrder: index });
     }
 
-    const feedbackId = await createFeedbackRecord({ ...fields, photos: stored });
-    return getFeedbackById(feedbackId);
+    feedbackId = await dependencies.feedback.createFeedbackRecord({
+      ...fields,
+      photos: stored,
+    });
   } catch (error) {
-    await Promise.allSettled(stored.map((photo) => storage.delete(photo.storageKey)));
+    await dependencies
+      .cleanupPhotos(stored.map((photo) => photo.storageKey))
+      .catch(console.error);
     throw error;
   }
+  const saved = await dependencies.feedback.getFeedbackById(feedbackId);
+  return saved ? presentFeedback(saved) : null;
 }

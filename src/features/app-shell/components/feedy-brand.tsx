@@ -1,12 +1,12 @@
-import Link from "next/link"
-import { MessageSquareText } from "lucide-react"
+import Link from "next/link";
+import { MessageSquareText } from "lucide-react";
 
-import { cn } from "@/lib/utils"
+import { cn } from "@/lib/utils";
 
 type FeedyBrandProps = {
-  className?: string
-  compact?: boolean
-}
+  className?: string;
+  compact?: boolean;
+};
 
 export function FeedyBrand({ className, compact = false }: FeedyBrandProps) {
   return (
@@ -14,7 +14,7 @@ export function FeedyBrand({ className, compact = false }: FeedyBrandProps) {
       aria-label="Feedy feedback dashboard"
       className={cn(
         "inline-flex min-h-11 items-center gap-2.5 rounded-md font-semibold tracking-tight text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-        className
+        className,
       )}
       href="/"
       prefetch={false}
@@ -28,5 +28,5 @@ export function FeedyBrand({ className, compact = false }: FeedyBrandProps) {
         </span>
       )}
     </Link>
-  )
+  );
 }

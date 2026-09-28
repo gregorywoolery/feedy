@@ -68,13 +68,15 @@ docker compose down
 
 ## Local database defaults
 
-| Setting | Default |
-| --- | --- |
-| Database | `feedy` |
-| User | `feedy` |
-| Password | `feedy` |
-| Host access | `localhost:5433` |
-| App-container access | `db:5432` |
-| SSL | Disabled for the local URL |
+| Setting              | Default                    |
+| -------------------- | -------------------------- |
+| Database             | `feedy`                    |
+| User                 | `feedy`                    |
+| Password             | `feedy`                    |
+| Host access          | `localhost:5433`           |
+| App-container access | `db:5432`                  |
+| SSL                  | Disabled for the local URL |
 
 These defaults are for local development only. Change them before using the bundled service in any shared or externally reachable environment.
+
+Both published ports bind only to `127.0.0.1`. The app still listens on all interfaces inside its container for Docker forwarding. The container upload destination is fixed to the mounted `/app/data/uploads`; host `UPLOAD_DIR` does not override it. The image bundles the same migration entry point and database configuration as the host tooling.

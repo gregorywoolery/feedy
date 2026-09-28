@@ -1,11 +1,25 @@
+import { getProjects } from "@/server/application";
 import { FolderKanban, MessageSquarePlus, Plus, Trash2 } from "lucide-react";
 import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
 import { LocalDateTime } from "@/components/local-date-time";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
-import { listProjectOptions, listProjects } from "@/data-access/projects/project-repository";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
 import { FeedbackSheet } from "@/features/feedback/components/feedback-sheet";
 import { ProjectSheet } from "@/features/projects/components/project-sheet";
 import { DeleteProjectDialog } from "@/features/projects/components/delete-project-dialog";
@@ -15,15 +29,18 @@ export const dynamic = "force-dynamic";
 export const metadata = { title: "Projects" };
 
 export default async function ProjectsPage() {
-  const [projects, options] = await Promise.all([listProjects(), listProjectOptions()]);
+  const { projects, options } = await getProjects();
 
   return (
     <div className="flex flex-col gap-7">
       <header className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
         <div className="flex max-w-2xl flex-col gap-2">
-          <h1 className="text-3xl font-semibold tracking-tight text-foreground">Projects</h1>
+          <h1 className="text-3xl font-semibold tracking-tight text-foreground">
+            Projects
+          </h1>
           <p className="text-sm leading-6 text-muted-foreground">
-            Keep every observation, version, and photo grouped by the work it belongs to.
+            Keep every observation, version, and photo grouped by the work it
+            belongs to.
           </p>
         </div>
         <div className="flex flex-col gap-3 sm:flex-row">
@@ -32,7 +49,10 @@ export default async function ProjectsPage() {
               projects={options}
               trigger={
                 <Button variant="outline">
-                  <MessageSquarePlus aria-hidden="true" data-icon="inline-start" />
+                  <MessageSquarePlus
+                    aria-hidden="true"
+                    data-icon="inline-start"
+                  />
                   Add feedback
                 </Button>
               }
@@ -62,24 +82,36 @@ export default async function ProjectsPage() {
               <CardContent className="mt-auto flex flex-col gap-3">
                 <div className="flex items-center justify-between gap-4 text-sm">
                   <span className="text-muted-foreground">Feedback</span>
-                  <span className="font-semibold tabular-nums">{project.feedbackCount}</span>
+                  <span className="font-semibold tabular-nums">
+                    {project.feedbackCount}
+                  </span>
                 </div>
                 <div className="flex items-start justify-between gap-4 text-sm">
                   <span className="text-muted-foreground">Last activity</span>
                   <span className="text-right font-medium">
-                    {project.lastActivityAt ? <LocalDateTime value={project.lastActivityAt} /> : "No activity"}
+                    {project.lastActivityAt ? (
+                      <LocalDateTime value={project.lastActivityAt} />
+                    ) : (
+                      "No activity"
+                    )}
                   </span>
                 </div>
               </CardContent>
               <CardFooter className="gap-2 border-t pt-4">
                 <Button asChild className="flex-1" variant="outline">
-                  <Link href={`/projects/${project.id}`} prefetch={false}>Open project</Link>
+                  <Link href={`/projects/${project.id}`} prefetch={false}>
+                    Open project
+                  </Link>
                 </Button>
                 <FeedbackSheet
                   defaultProjectId={project.id}
                   projects={options}
                   trigger={
-                    <Button aria-label={`Add feedback to ${project.name}`} size="icon" variant="ghost">
+                    <Button
+                      aria-label={`Add feedback to ${project.name}`}
+                      size="icon"
+                      variant="ghost"
+                    >
                       <MessageSquarePlus aria-hidden="true" />
                     </Button>
                   }
@@ -89,7 +121,12 @@ export default async function ProjectsPage() {
                   projectId={project.id}
                   projectName={project.name}
                   trigger={
-                    <Button aria-label={`Delete ${project.name}`} size="icon" type="button" variant="ghost">
+                    <Button
+                      aria-label={`Delete ${project.name}`}
+                      size="icon"
+                      type="button"
+                      variant="ghost"
+                    >
                       <Trash2 aria-hidden="true" />
                     </Button>
                   }
@@ -106,7 +143,8 @@ export default async function ProjectsPage() {
             </EmptyMedia>
             <EmptyTitle>Create your first project</EmptyTitle>
             <EmptyDescription>
-              Feedback always belongs to a project. Start by naming the work you want to review.
+              Feedback always belongs to a project. Start by naming the work you
+              want to review.
             </EmptyDescription>
           </EmptyHeader>
           <EmptyContent>

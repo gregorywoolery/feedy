@@ -10,11 +10,7 @@ import {
   validateAndNormalizePhotos,
 } from "@/lib/validation/photos";
 
-function fileFromBytes(
-  bytes: Uint8Array,
-  name: string,
-  type = "",
-): File {
+function fileFromBytes(bytes: Uint8Array, name: string, type = ""): File {
   const copy = Uint8Array.from(bytes);
   return {
     name,
@@ -57,22 +53,25 @@ describe("validateAndNormalizePhotos", () => {
     ["jpeg", "image/jpeg"],
     ["png", "image/png"],
     ["webp", "image/webp"],
-  ] as const)("accepts and normalizes a real %s image", async (format, mimeType) => {
-    const bytes = await imageBytes(format);
-    const [photo] = await validateAndNormalizePhotos([
-      fileFromBytes(bytes, `screen.${format}`, mimeType),
-    ]);
+  ] as const)(
+    "accepts and normalizes a real %s image",
+    async (format, mimeType) => {
+      const bytes = await imageBytes(format);
+      const [photo] = await validateAndNormalizePhotos([
+        fileFromBytes(bytes, `screen.${format}`, mimeType),
+      ]);
 
-    expect(photo).toMatchObject({
-      originalFilename: `screen.${format}`,
-      mimeType,
-      width: 32,
-      height: 24,
-    });
-    expect(photo.sizeBytes).toBe(photo.bytes.byteLength);
-    expect(photo.sizeBytes).toBeGreaterThan(0);
-    expect((await sharp(photo.bytes).metadata()).format).toBe(format);
-  });
+      expect(photo).toMatchObject({
+        originalFilename: `screen.${format}`,
+        mimeType,
+        width: 32,
+        height: 24,
+      });
+      expect(photo.sizeBytes).toBe(photo.bytes.byteLength);
+      expect(photo.sizeBytes).toBeGreaterThan(0);
+      expect((await sharp(photo.bytes).metadata()).format).toBe(format);
+    },
+  );
 
   it("resizes large images and reduces unsafe filenames to a basename", async () => {
     const bytes = await imageBytes("png", 3_000, 30);
@@ -95,7 +94,11 @@ describe("validateAndNormalizePhotos", () => {
     ).rejects.toThrow(/does not match its file type/);
     await expect(
       validateAndNormalizePhotos([
-        fileFromBytes(new TextEncoder().encode("not an image"), "fake.png", "image/png"),
+        fileFromBytes(
+          new TextEncoder().encode("not an image"),
+          "fake.png",
+          "image/png",
+        ),
       ]),
     ).rejects.toThrow(/not a supported JPEG, PNG, or WebP image/);
   });

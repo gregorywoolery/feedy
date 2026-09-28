@@ -71,3 +71,7 @@ If no photos are attached, the PDF explicitly says so. Images are auto-rotated, 
 - A filtered export with no matches or more than 500 matches is rejected with an actionable error.
 
 PDF generation is synchronous in the request process. There is no background queue, stored export history, CSV export, ZIP bundle, or custom export template in this release.
+
+## Resource budgets
+
+All export routes share one per-process admission slot, including image loading. Photo metadata is checked before reading any bytes: at most 100 photos and 50 MiB total per export. Actual returned bytes are checked again. A busy process returns HTTP 429; an oversized selection returns HTTP 400 with an actionable message. Existing 100-selected/500-filtered record limits also apply. Multi-instance hosting has one slot per process, not a global queue.

@@ -53,7 +53,9 @@ function pageText(document: PDFDocument, pageIndex: number) {
   const contents = document.getPage(pageIndex).node.Contents();
   const streams =
     contents instanceof PDFArray
-      ? contents.asArray().map((entry) => document.context.lookup(entry) as PDFStream)
+      ? contents
+          .asArray()
+          .map((entry) => document.context.lookup(entry) as PDFStream)
       : contents
         ? [contents as PDFStream]
         : [];

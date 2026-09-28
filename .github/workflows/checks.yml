@@ -1,0 +1,41 @@
+name: Checks
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: feedy
+          POSTGRES_PASSWORD: feedy
+          POSTGRES_DB: feedy_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U feedy -d feedy_test"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgresql://feedy:feedy@127.0.0.1:5432/feedy_test?sslmode=disable
+      TEST_DATABASE_URL: postgresql://feedy:feedy@127.0.0.1:5432/feedy_test?sslmode=disable
+      STORAGE_DRIVER: database
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run check:secrets
+      - run: npm run lint
+      - run: npm run format:check
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run db:migrate
+      - run: npm run test:integration
+      - run: npm run build
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e

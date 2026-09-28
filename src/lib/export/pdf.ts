@@ -1,4 +1,10 @@
-import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage } from "pdf-lib";
+import {
+  PDFDocument,
+  StandardFonts,
+  rgb,
+  type PDFFont,
+  type PDFPage,
+} from "pdf-lib";
 import sharp from "sharp";
 
 import type { FeedbackExportRecord } from "@/entities/contracts/feedback";
@@ -23,7 +29,7 @@ function formatDate(value: string) {
   return new Intl.DateTimeFormat("en", {
     dateStyle: "medium",
     timeStyle: "short",
-    timeZone: "UTC"
+    timeZone: "UTC",
   }).format(new Date(value));
 }
 
@@ -55,7 +61,10 @@ function wrapText(text: string, font: PDFFont, size: number, maxWidth: number) {
       let fragment = "";
       for (const character of word) {
         const candidateFragment = `${fragment}${character}`;
-        if (font.widthOfTextAtSize(candidateFragment, size) > maxWidth && fragment) {
+        if (
+          font.widthOfTextAtSize(candidateFragment, size) > maxWidth &&
+          fragment
+        ) {
           lines.push(fragment);
           fragment = character;
         } else {
@@ -72,7 +81,13 @@ function wrapText(text: string, font: PDFFont, size: number, maxWidth: number) {
 
 function addBasePage(document: PDFDocument) {
   const page = document.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
-  page.drawRectangle({ x: 0, y: 0, width: PAGE_WIDTH, height: PAGE_HEIGHT, color: rgb(1, 1, 1) });
+  page.drawRectangle({
+    x: 0,
+    y: 0,
+    width: PAGE_WIDTH,
+    height: PAGE_HEIGHT,
+    color: rgb(1, 1, 1),
+  });
   return page;
 }
 
@@ -82,24 +97,30 @@ function drawBrand(page: PDFPage, fonts: PdfFonts) {
     y: PAGE_HEIGHT - MARGIN + 3,
     size: 18,
     font: fonts.bold,
-    color: PRIMARY
+    color: PRIMARY,
   });
 }
 
-function drawLabel(page: PDFPage, fonts: PdfFonts, label: string, value: string, y: number) {
+function drawLabel(
+  page: PDFPage,
+  fonts: PdfFonts,
+  label: string,
+  value: string,
+  y: number,
+) {
   page.drawText(label.toUpperCase(), {
     x: MARGIN,
     y,
     size: 8,
     font: fonts.bold,
-    color: MUTED
+    color: MUTED,
   });
   page.drawText(value, {
     x: MARGIN + 118,
     y: y - 1,
     size: 10.5,
     font: fonts.regular,
-    color: INK
+    color: INK,
   });
 }
 
@@ -109,7 +130,7 @@ function drawRecordHeader(
   record: FeedbackExportRecord,
   index: number,
   total: number,
-  continued = false
+  continued = false,
 ) {
   drawBrand(page, fonts);
   page.drawText(continued ? "Feedback (continued)" : "Feedback record", {
@@ -117,20 +138,20 @@ function drawRecordHeader(
     y: PAGE_HEIGHT - 89,
     size: 21,
     font: fonts.bold,
-    color: INK
+    color: INK,
   });
   page.drawText(`Feedback ${index + 1} of ${total}`, {
     x: PAGE_WIDTH - MARGIN - 88,
     y: PAGE_HEIGHT - 84,
     size: 9,
     font: fonts.bold,
-    color: PRIMARY
+    color: PRIMARY,
   });
   page.drawLine({
     start: { x: MARGIN, y: PAGE_HEIGHT - 106 },
     end: { x: PAGE_WIDTH - MARGIN, y: PAGE_HEIGHT - 106 },
     thickness: 1,
-    color: LINE
+    color: LINE,
   });
   drawLabel(page, fonts, "Project", record.projectName, PAGE_HEIGHT - 132);
   drawLabel(page, fonts, "Version", record.projectVersion, PAGE_HEIGHT - 153);
@@ -144,9 +165,14 @@ function drawDescription(
   record: FeedbackExportRecord,
   initialY: number,
   index: number,
-  total: number
+  total: number,
 ) {
-  const lines = wrapText(record.description, fonts.regular, 10.5, CONTENT_WIDTH - 24);
+  const lines = wrapText(
+    record.description,
+    fonts.regular,
+    10.5,
+    CONTENT_WIDTH - 24,
+  );
   const remaining = [...lines];
   let y = initialY;
   let continued = false;
@@ -161,7 +187,7 @@ function drawDescription(
       y,
       size: 8,
       font: fonts.bold,
-      color: MUTED
+      color: MUTED,
     });
     page.drawRectangle({
       x: MARGIN,
@@ -170,7 +196,7 @@ function drawDescription(
       height: boxHeight,
       color: PALE,
       borderColor: LINE,
-      borderWidth: 0.8
+      borderWidth: 0.8,
     });
     let textY = y - 34;
     for (const line of chunk) {
@@ -179,7 +205,7 @@ function drawDescription(
         y: textY,
         size: 10.5,
         font: fonts.regular,
-        color: INK
+        color: INK,
       });
       textY -= 15;
     }
@@ -198,7 +224,12 @@ function drawDescription(
 async function normalizeForPdf(bytes: Uint8Array) {
   return sharp(bytes)
     .rotate()
-    .resize({ width: 1500, height: 1200, fit: "inside", withoutEnlargement: true })
+    .resize({
+      width: 1500,
+      height: 1200,
+      fit: "inside",
+      withoutEnlargement: true,
+    })
     .flatten({ background: "#ffffff" })
     .jpeg({ quality: 82, mozjpeg: true })
     .toBuffer();
@@ -209,11 +240,19 @@ async function drawRecord(
   fonts: PdfFonts,
   record: FeedbackExportRecord,
   index: number,
-  total: number
+  total: number,
 ) {
   let page = addBasePage(document);
   let y = drawRecordHeader(page, fonts, record, index, total);
-  const descriptionResult = drawDescription(document, page, fonts, record, y, index, total);
+  const descriptionResult = drawDescription(
+    document,
+    page,
+    fonts,
+    record,
+    y,
+    index,
+    total,
+  );
   page = descriptionResult.page;
   y = descriptionResult.y;
 
@@ -231,7 +270,7 @@ async function drawRecord(
     y,
     size: 8,
     font: fonts.bold,
-    color: MUTED
+    color: MUTED,
   });
   y -= 20;
 
@@ -241,7 +280,7 @@ async function drawRecord(
       y: y - 10,
       size: 10.5,
       font: fonts.regular,
-      color: MUTED
+      color: MUTED,
     });
     return;
   }
@@ -250,7 +289,11 @@ async function drawRecord(
     const normalized = await normalizeForPdf(photo.bytes);
     const embedded = await document.embedJpg(normalized);
     const availableHeight = 300;
-    const scale = Math.min(CONTENT_WIDTH / embedded.width, availableHeight / embedded.height, 1);
+    const scale = Math.min(
+      CONTENT_WIDTH / embedded.width,
+      availableHeight / embedded.height,
+      1,
+    );
     const width = embedded.width * scale;
     const height = embedded.height * scale;
 
@@ -266,13 +309,13 @@ async function drawRecord(
       height: height + 16,
       color: PALE,
       borderColor: LINE,
-      borderWidth: 0.8
+      borderWidth: 0.8,
     });
     page.drawImage(embedded, {
       x: MARGIN + (CONTENT_WIDTH - width) / 2,
       y: y - height,
       width,
-      height
+      height,
     });
     y -= height + 22;
     page.drawText(photo.originalFilename, {
@@ -280,7 +323,7 @@ async function drawRecord(
       y,
       size: 9,
       font: fonts.regular,
-      color: MUTED
+      color: MUTED,
     });
     y -= 28;
   }
@@ -290,7 +333,7 @@ function drawCover(
   document: PDFDocument,
   fonts: PdfFonts,
   records: FeedbackExportRecord[],
-  generatedAt: Date
+  generatedAt: Date,
 ) {
   const page = addBasePage(document);
   drawBrand(page, fonts);
@@ -299,14 +342,14 @@ function drawCover(
     y: PAGE_HEIGHT - 160,
     size: 32,
     font: fonts.bold,
-    color: INK
+    color: INK,
   });
   page.drawText("A structured record of selected project feedback.", {
     x: MARGIN,
     y: PAGE_HEIGHT - 190,
     size: 12,
     font: fonts.regular,
-    color: MUTED
+    color: MUTED,
   });
   const projectCount = new Set(records.map((record) => record.projectId)).size;
   page.drawRectangle({
@@ -316,46 +359,50 @@ function drawCover(
     height: 72,
     color: PALE,
     borderColor: LINE,
-    borderWidth: 0.8
+    borderWidth: 0.8,
   });
   page.drawText(String(records.length), {
     x: MARGIN + 18,
     y: PAGE_HEIGHT - 260,
     size: 22,
     font: fonts.bold,
-    color: INK
+    color: INK,
   });
   page.drawText("feedback items", {
     x: MARGIN + 18,
     y: PAGE_HEIGHT - 278,
     size: 9,
     font: fonts.regular,
-    color: MUTED
+    color: MUTED,
   });
   page.drawText(String(projectCount), {
     x: MARGIN + 178,
     y: PAGE_HEIGHT - 260,
     size: 22,
     font: fonts.bold,
-    color: INK
+    color: INK,
   });
   page.drawText("projects", {
     x: MARGIN + 178,
     y: PAGE_HEIGHT - 278,
     size: 9,
     font: fonts.regular,
-    color: MUTED
+    color: MUTED,
   });
   page.drawText(`Generated ${formatDate(generatedAt.toISOString())}`, {
     x: MARGIN,
     y: 70,
     size: 9,
     font: fonts.regular,
-    color: MUTED
+    color: MUTED,
   });
 }
 
-function drawContents(document: PDFDocument, fonts: PdfFonts, records: FeedbackExportRecord[]) {
+function drawContents(
+  document: PDFDocument,
+  fonts: PdfFonts,
+  records: FeedbackExportRecord[],
+) {
   let page = addBasePage(document);
   drawBrand(page, fonts);
   page.drawText("Contents", {
@@ -363,7 +410,7 @@ function drawContents(document: PDFDocument, fonts: PdfFonts, records: FeedbackE
     y: PAGE_HEIGHT - 90,
     size: 22,
     font: fonts.bold,
-    color: INK
+    color: INK,
   });
   let y = PAGE_HEIGHT - 130;
 
@@ -377,7 +424,7 @@ function drawContents(document: PDFDocument, fonts: PdfFonts, records: FeedbackE
         y: PAGE_HEIGHT - 90,
         size: 22,
         font: fonts.bold,
-        color: INK
+        color: INK,
       });
       y = PAGE_HEIGHT - 130;
     }
@@ -386,27 +433,27 @@ function drawContents(document: PDFDocument, fonts: PdfFonts, records: FeedbackE
       y,
       size: 9,
       font: fonts.bold,
-      color: PRIMARY
+      color: PRIMARY,
     });
     page.drawText(record.projectName, {
       x: MARGIN + 34,
       y,
       size: 10,
       font: fonts.bold,
-      color: INK
+      color: INK,
     });
     page.drawText(`Version ${record.projectVersion}`, {
       x: MARGIN + 255,
       y,
       size: 9,
       font: fonts.regular,
-      color: MUTED
+      color: MUTED,
     });
     page.drawLine({
       start: { x: MARGIN, y: y - 12 },
       end: { x: PAGE_WIDTH - MARGIN, y: y - 12 },
       thickness: 0.6,
-      color: LINE
+      color: LINE,
     });
     y -= 34;
   }
@@ -414,16 +461,19 @@ function drawContents(document: PDFDocument, fonts: PdfFonts, records: FeedbackE
 
 export async function createFeedbackPdf(
   records: FeedbackExportRecord[],
-  generatedAt = new Date()
+  generatedAt = new Date(),
 ) {
-  if (records.length === 0) throw new Error("At least one feedback record is required.");
+  if (records.length === 0)
+    throw new Error("At least one feedback record is required.");
 
   const document = await PDFDocument.create();
   const fonts = {
     regular: await document.embedFont(StandardFonts.Helvetica),
-    bold: await document.embedFont(StandardFonts.HelveticaBold)
+    bold: await document.embedFont(StandardFonts.HelveticaBold),
   };
-  document.setTitle(records.length === 1 ? "Feedy feedback record" : "Feedy feedback export");
+  document.setTitle(
+    records.length === 1 ? "Feedy feedback record" : "Feedy feedback export",
+  );
   document.setAuthor("Feedy");
   document.setCreator("Feedy");
   document.setCreationDate(generatedAt);
@@ -446,7 +496,7 @@ export async function createFeedbackPdf(
       y: FOOTER_Y,
       size: 8,
       font: fonts.regular,
-      color: MUTED
+      color: MUTED,
     });
   });
 

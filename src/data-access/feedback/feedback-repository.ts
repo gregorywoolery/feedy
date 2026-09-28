@@ -1,3 +1,8 @@
+import type {
+  FeedbackDataRecord,
+  FeedbackDataPage,
+  FeedbackPhotoData,
+} from "@/entities/feedback-data";
 import {
   and,
   asc,
@@ -11,29 +16,24 @@ import {
   lt,
   or,
   sql,
-  type SQL
+  type SQL,
 } from "drizzle-orm";
 
 import type {
-  FeedbackDetailRecord,
-  FeedbackListItem,
-  FeedbackPage,
-  FeedbackPhotoRecord,
   FeedbackQuery,
-  FeedbackSummary
+  FeedbackSummary,
 } from "@/entities/contracts/feedback";
 import { db } from "@/lib/database/client";
-import { feedbackItems, feedbackPhotos, projects } from "@/lib/database/schema";
-import type { ValidatedPhoto } from "@/lib/validation/photos";
-
-export interface StoredPhotoInput extends ValidatedPhoto {
-  storageKey: string;
-  sortOrder: number;
-}
-
-function photoUrl(id: string) {
-  return `/api/photos/${id}`;
-}
+import {
+  feedbackItems,
+  feedbackPhotos,
+  photoCleanupJobs,
+  projects,
+} from "@/lib/database/schema";
+import {
+  FeedbackPhotoStateError,
+  type StoredPhotoInput,
+} from "@/entities/photos";
 
 function serializePhoto(photo: {
   id: string;
@@ -43,11 +43,10 @@ function serializePhoto(photo: {
   width: number | null;
   height: number | null;
   sortOrder: number;
-}): FeedbackPhotoRecord {
+}): FeedbackPhotoData {
   return {
     ...photo,
-    mimeType: photo.mimeType as FeedbackPhotoRecord["mimeType"],
-    url: photoUrl(photo.id)
+    mimeType: photo.mimeType as FeedbackPhotoData["mimeType"],
   };
 }
 
@@ -68,22 +67,26 @@ function buildConditions(query: FeedbackQuery) {
     const search = or(
       ilike(projects.name, pattern),
       ilike(feedbackItems.projectVersion, pattern),
-      ilike(feedbackItems.description, pattern)
+      ilike(feedbackItems.description, pattern),
     );
     if (search) conditions.push(search);
   }
-  if (query.project) conditions.push(eq(feedbackItems.projectId, query.project));
-  if (query.version) conditions.push(eq(feedbackItems.projectVersion, query.version));
-  if (query.from) conditions.push(gte(feedbackItems.createdAt, startOfUtcDay(query.from)));
-  if (query.to) conditions.push(lt(feedbackItems.createdAt, nextUtcDay(query.to)));
+  if (query.project)
+    conditions.push(eq(feedbackItems.projectId, query.project));
+  if (query.version)
+    conditions.push(eq(feedbackItems.projectVersion, query.version));
+  if (query.from)
+    conditions.push(gte(feedbackItems.createdAt, startOfUtcDay(query.from)));
+  if (query.to)
+    conditions.push(lt(feedbackItems.createdAt, nextUtcDay(query.to)));
   if (query.hasPhotos === "yes") {
     conditions.push(
-      sql`exists (select 1 from ${feedbackPhotos} fp where fp.feedback_id = ${feedbackItems.id})`
+      sql`exists (select 1 from ${feedbackPhotos} fp where fp.feedback_id = ${feedbackItems.id})`,
     );
   }
   if (query.hasPhotos === "no") {
     conditions.push(
-      sql`not exists (select 1 from ${feedbackPhotos} fp where fp.feedback_id = ${feedbackItems.id})`
+      sql`not exists (select 1 from ${feedbackPhotos} fp where fp.feedback_id = ${feedbackItems.id})`,
     );
   }
   return conditions.length ? and(...conditions) : undefined;
@@ -97,7 +100,7 @@ function sortColumn(query: FeedbackQuery) {
 }
 
 async function photosForFeedbackIds(ids: string[]) {
-  if (!ids.length) return new Map<string, FeedbackPhotoRecord[]>();
+  if (!ids.length) return new Map<string, FeedbackPhotoData[]>();
   const rows = await db
     .select({
       id: feedbackPhotos.id,
@@ -107,13 +110,13 @@ async function photosForFeedbackIds(ids: string[]) {
       sizeBytes: feedbackPhotos.sizeBytes,
       width: feedbackPhotos.width,
       height: feedbackPhotos.height,
-      sortOrder: feedbackPhotos.sortOrder
+      sortOrder: feedbackPhotos.sortOrder,
     })
     .from(feedbackPhotos)
     .where(inArray(feedbackPhotos.feedbackId, ids))
     .orderBy(feedbackPhotos.feedbackId, feedbackPhotos.sortOrder);
 
-  const byFeedback = new Map<string, FeedbackPhotoRecord[]>();
+  const byFeedback = new Map<string, FeedbackPhotoData[]>();
   for (const row of rows) {
     const list = byFeedback.get(row.feedbackId) ?? [];
     list.push(serializePhoto(row));
@@ -122,7 +125,9 @@ async function photosForFeedbackIds(ids: string[]) {
   return byFeedback;
 }
 
-export async function listFeedback(query: FeedbackQuery): Promise<FeedbackPage> {
+export async function listFeedback(
+  query: FeedbackQuery,
+): Promise<FeedbackDataPage> {
   const where = buildConditions(query);
   const [{ total }] = await db
     .select({ total: count() })
@@ -132,8 +137,10 @@ export async function listFeedback(query: FeedbackQuery): Promise<FeedbackPage> 
 
   const pageCount = Math.max(1, Math.ceil(Number(total) / query.pageSize));
   const page = Math.min(query.page, pageCount);
-  const primarySort = query.order === "asc" ? asc(sortColumn(query)) : desc(sortColumn(query));
-  const tieBreak = query.order === "asc" ? asc(feedbackItems.id) : desc(feedbackItems.id);
+  const primarySort =
+    query.order === "asc" ? asc(sortColumn(query)) : desc(sortColumn(query));
+  const tieBreak =
+    query.order === "asc" ? asc(feedbackItems.id) : desc(feedbackItems.id);
 
   const rows = await db
     .select({
@@ -143,7 +150,7 @@ export async function listFeedback(query: FeedbackQuery): Promise<FeedbackPage> 
       projectVersion: feedbackItems.projectVersion,
       description: feedbackItems.description,
       createdAt: feedbackItems.createdAt,
-      updatedAt: feedbackItems.updatedAt
+      updatedAt: feedbackItems.updatedAt,
     })
     .from(feedbackItems)
     .innerJoin(projects, eq(feedbackItems.projectId, projects.id))
@@ -153,27 +160,35 @@ export async function listFeedback(query: FeedbackQuery): Promise<FeedbackPage> 
     .offset((page - 1) * query.pageSize);
 
   const photoMap = await photosForFeedbackIds(rows.map((row) => row.id));
-  const items: FeedbackListItem[] = rows.map((row) => {
+  const items: FeedbackDataRecord[] = rows.map((row) => {
     const photos = photoMap.get(row.id) ?? [];
     return {
       ...row,
       photos,
       photoCount: photos.length,
       createdAt: row.createdAt.toISOString(),
-      updatedAt: row.updatedAt.toISOString()
+      updatedAt: row.updatedAt.toISOString(),
     };
   });
 
-  return { items, total: Number(total), page, pageSize: query.pageSize, pageCount };
+  return {
+    items,
+    total: Number(total),
+    page,
+    pageSize: query.pageSize,
+    pageCount,
+  };
 }
 
 export async function listFeedbackIds(
   query: FeedbackQuery,
-  maximum: number
+  maximum: number,
 ): Promise<{ ids: string[]; exceedsMaximum: boolean }> {
   const where = buildConditions(query);
-  const primarySort = query.order === "asc" ? asc(sortColumn(query)) : desc(sortColumn(query));
-  const tieBreak = query.order === "asc" ? asc(feedbackItems.id) : desc(feedbackItems.id);
+  const primarySort =
+    query.order === "asc" ? asc(sortColumn(query)) : desc(sortColumn(query));
+  const tieBreak =
+    query.order === "asc" ? asc(feedbackItems.id) : desc(feedbackItems.id);
   const rows = await db
     .select({ id: feedbackItems.id })
     .from(feedbackItems)
@@ -184,7 +199,7 @@ export async function listFeedbackIds(
 
   return {
     ids: rows.slice(0, maximum).map((row) => row.id),
-    exceedsMaximum: rows.length > maximum
+    exceedsMaximum: rows.length > maximum,
   };
 }
 
@@ -193,16 +208,19 @@ export async function getFeedbackSummary(): Promise<FeedbackSummary> {
     db
       .select({
         feedbackCount: countDistinct(feedbackItems.id),
-        withPhotosCount: countDistinct(feedbackPhotos.feedbackId)
+        withPhotosCount: countDistinct(feedbackPhotos.feedbackId),
       })
       .from(feedbackItems)
-      .leftJoin(feedbackPhotos, eq(feedbackPhotos.feedbackId, feedbackItems.id)),
-    db.select({ projectCount: count(projects.id) }).from(projects)
+      .leftJoin(
+        feedbackPhotos,
+        eq(feedbackPhotos.feedbackId, feedbackItems.id),
+      ),
+    db.select({ projectCount: count(projects.id) }).from(projects),
   ]);
   return {
     feedbackCount: Number(row.feedbackCount),
     projectCount: Number(projectRow.projectCount),
-    withPhotosCount: Number(row.withPhotosCount)
+    withPhotosCount: Number(row.withPhotosCount),
   };
 }
 
@@ -215,7 +233,9 @@ export async function listFeedbackVersions(projectId?: string) {
   return rows.map((row) => row.version);
 }
 
-export async function getFeedbackById(feedbackId: string): Promise<FeedbackDetailRecord | null> {
+export async function getFeedbackById(
+  feedbackId: string,
+): Promise<FeedbackDataRecord | null> {
   const [row] = await db
     .select({
       id: feedbackItems.id,
@@ -224,7 +244,7 @@ export async function getFeedbackById(feedbackId: string): Promise<FeedbackDetai
       projectVersion: feedbackItems.projectVersion,
       description: feedbackItems.description,
       createdAt: feedbackItems.createdAt,
-      updatedAt: feedbackItems.updatedAt
+      updatedAt: feedbackItems.updatedAt,
     })
     .from(feedbackItems)
     .innerJoin(projects, eq(feedbackItems.projectId, projects.id))
@@ -238,7 +258,7 @@ export async function getFeedbackById(feedbackId: string): Promise<FeedbackDetai
     photos,
     photoCount: photos.length,
     createdAt: row.createdAt.toISOString(),
-    updatedAt: row.updatedAt.toISOString()
+    updatedAt: row.updatedAt.toISOString(),
   };
 }
 
@@ -251,7 +271,7 @@ export async function getFeedbackBatch(ids: string[]) {
       projectVersion: feedbackItems.projectVersion,
       description: feedbackItems.description,
       createdAt: feedbackItems.createdAt,
-      updatedAt: feedbackItems.updatedAt
+      updatedAt: feedbackItems.updatedAt,
     })
     .from(feedbackItems)
     .innerJoin(projects, eq(feedbackItems.projectId, projects.id))
@@ -267,12 +287,12 @@ export async function getFeedbackBatch(ids: string[]) {
           photos,
           photoCount: photos.length,
           createdAt: row.createdAt.toISOString(),
-          updatedAt: row.updatedAt.toISOString()
-        } satisfies FeedbackDetailRecord
+          updatedAt: row.updatedAt.toISOString(),
+        } satisfies FeedbackDataRecord,
       ];
-    })
+    }),
   );
-  return ids.map((id) => byId.get(id)).filter(Boolean) as FeedbackDetailRecord[];
+  return ids.map((id) => byId.get(id)).filter(Boolean) as FeedbackDataRecord[];
 }
 
 export async function createFeedbackRecord(input: {
@@ -287,7 +307,7 @@ export async function createFeedbackRecord(input: {
       .values({
         projectId: input.projectId,
         projectVersion: input.projectVersion,
-        description: input.description
+        description: input.description,
       })
       .returning();
 
@@ -301,55 +321,105 @@ export async function createFeedbackRecord(input: {
           sizeBytes: photo.sizeBytes,
           width: photo.width,
           height: photo.height,
-          sortOrder: photo.sortOrder
-        }))
+          sortOrder: photo.sortOrder,
+        })),
       );
     }
     return feedback.id;
   });
 }
 
-export class FeedbackPhotoStateError extends Error {}
-
 export async function updateFeedbackRecord(input: {
   feedbackId: string;
   projectVersion: string;
   description: string;
+  expectedPhotoIds: string[];
   retainedPhotos: Array<{ id: string; sortOrder: number }>;
   newPhotos: StoredPhotoInput[];
+  storageNamespace: string;
 }) {
   return db.transaction(async (transaction) => {
-    const current = await transaction.select({ id: feedbackPhotos.id, storageKey: feedbackPhotos.storageKey })
-      .from(feedbackPhotos).where(eq(feedbackPhotos.feedbackId, input.feedbackId));
+    const [locked] = await transaction
+      .select({ id: feedbackItems.id })
+      .from(feedbackItems)
+      .where(eq(feedbackItems.id, input.feedbackId))
+      .for("update");
+    if (!locked) return null;
+    const current = await transaction
+      .select({ id: feedbackPhotos.id, storageKey: feedbackPhotos.storageKey })
+      .from(feedbackPhotos)
+      .where(eq(feedbackPhotos.feedbackId, input.feedbackId));
     const currentIds = new Set(current.map((photo) => photo.id));
-    if (input.retainedPhotos.some((photo) => !currentIds.has(photo.id))) {
-      throw new FeedbackPhotoStateError("The attached photos changed. Refresh and try again.");
+    if (
+      currentIds.size !== input.expectedPhotoIds.length ||
+      input.expectedPhotoIds.some((id) => !currentIds.has(id)) ||
+      input.retainedPhotos.some((photo) => !currentIds.has(photo.id))
+    ) {
+      throw new FeedbackPhotoStateError(
+        "The attached photos changed. Refresh and try again.",
+      );
     }
-    const [updated] = await transaction.update(feedbackItems).set({
-      projectVersion: input.projectVersion,
-      description: input.description,
-      updatedAt: new Date()
-    }).where(eq(feedbackItems.id, input.feedbackId)).returning({ id: feedbackItems.id });
+    const [updated] = await transaction
+      .update(feedbackItems)
+      .set({
+        projectVersion: input.projectVersion,
+        description: input.description,
+        updatedAt: new Date(),
+      })
+      .where(eq(feedbackItems.id, input.feedbackId))
+      .returning({ id: feedbackItems.id });
     if (!updated) return null;
 
     if (current.length) {
-      await transaction.update(feedbackPhotos)
+      await transaction
+        .update(feedbackPhotos)
         .set({ sortOrder: sql`${feedbackPhotos.sortOrder} + 1000` })
         .where(eq(feedbackPhotos.feedbackId, input.feedbackId));
     }
     const retainedIds = new Set(input.retainedPhotos.map((photo) => photo.id));
     const removed = current.filter((photo) => !retainedIds.has(photo.id));
-    if (removed.length) await transaction.delete(feedbackPhotos).where(inArray(feedbackPhotos.id, removed.map((photo) => photo.id)));
+    if (removed.length) {
+      await transaction
+        .insert(photoCleanupJobs)
+        .values(
+          removed.map((photo) => ({
+            storageKey: photo.storageKey,
+            storageNamespace: input.storageNamespace,
+          })),
+        )
+        .onConflictDoNothing();
+    }
+    if (removed.length)
+      await transaction.delete(feedbackPhotos).where(
+        inArray(
+          feedbackPhotos.id,
+          removed.map((photo) => photo.id),
+        ),
+      );
     for (const photo of input.retainedPhotos) {
-      await transaction.update(feedbackPhotos).set({ sortOrder: photo.sortOrder })
-        .where(and(eq(feedbackPhotos.id, photo.id), eq(feedbackPhotos.feedbackId, input.feedbackId)));
+      await transaction
+        .update(feedbackPhotos)
+        .set({ sortOrder: photo.sortOrder })
+        .where(
+          and(
+            eq(feedbackPhotos.id, photo.id),
+            eq(feedbackPhotos.feedbackId, input.feedbackId),
+          ),
+        );
     }
     if (input.newPhotos.length) {
-      await transaction.insert(feedbackPhotos).values(input.newPhotos.map((photo) => ({
-        feedbackId: input.feedbackId, storageKey: photo.storageKey, originalFilename: photo.originalFilename,
-        mimeType: photo.mimeType, sizeBytes: photo.sizeBytes, width: photo.width, height: photo.height,
-        sortOrder: photo.sortOrder
-      })));
+      await transaction.insert(feedbackPhotos).values(
+        input.newPhotos.map((photo) => ({
+          feedbackId: input.feedbackId,
+          storageKey: photo.storageKey,
+          originalFilename: photo.originalFilename,
+          mimeType: photo.mimeType,
+          sizeBytes: photo.sizeBytes,
+          width: photo.width,
+          height: photo.height,
+          sortOrder: photo.sortOrder,
+        })),
+      );
     }
     return { removedStorageKeys: removed.map((photo) => photo.storageKey) };
   });
@@ -361,7 +431,7 @@ export async function getPhotoStorageRecord(photoId: string) {
       id: feedbackPhotos.id,
       storageKey: feedbackPhotos.storageKey,
       mimeType: feedbackPhotos.mimeType,
-      originalFilename: feedbackPhotos.originalFilename
+      originalFilename: feedbackPhotos.originalFilename,
     })
     .from(feedbackPhotos)
     .where(eq(feedbackPhotos.id, photoId))
@@ -381,20 +451,40 @@ export async function listPhotoStorageRecords(feedbackIds: string[]) {
       sizeBytes: feedbackPhotos.sizeBytes,
       width: feedbackPhotos.width,
       height: feedbackPhotos.height,
-      sortOrder: feedbackPhotos.sortOrder
+      sortOrder: feedbackPhotos.sortOrder,
     })
     .from(feedbackPhotos)
     .where(inArray(feedbackPhotos.feedbackId, feedbackIds))
     .orderBy(feedbackPhotos.feedbackId, feedbackPhotos.sortOrder);
 }
 
-export async function deleteFeedbackRecords(feedbackIds: string[]) {
+export async function deleteFeedbackRecords(
+  feedbackIds: string[],
+  storageNamespace: string,
+) {
   return db.transaction(async (transaction) => {
+    await transaction
+      .select({ id: feedbackItems.id })
+      .from(feedbackItems)
+      .where(inArray(feedbackItems.id, feedbackIds))
+      .orderBy(feedbackItems.id)
+      .for("update");
     const photos = await transaction
       .select({ storageKey: feedbackPhotos.storageKey })
       .from(feedbackPhotos)
       .where(inArray(feedbackPhotos.feedbackId, feedbackIds));
 
+    if (photos.length) {
+      await transaction
+        .insert(photoCleanupJobs)
+        .values(
+          photos.map((photo) => ({
+            storageKey: photo.storageKey,
+            storageNamespace,
+          })),
+        )
+        .onConflictDoNothing();
+    }
     const deleted = await transaction
       .delete(feedbackItems)
       .where(inArray(feedbackItems.id, feedbackIds))
@@ -402,7 +492,7 @@ export async function deleteFeedbackRecords(feedbackIds: string[]) {
 
     return {
       deletedIds: deleted.map((item) => item.id),
-      storageKeys: photos.map((photo) => photo.storageKey)
+      storageKeys: photos.map((photo) => photo.storageKey),
     };
   });
 }

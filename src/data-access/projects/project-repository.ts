@@ -1,9 +1,17 @@
 import { count, desc, eq, max, sql } from "drizzle-orm";
 
-import type { ProjectOption, ProjectRecord } from "@/entities/contracts/project";
+import type {
+  ProjectOption,
+  ProjectRecord,
+} from "@/entities/contracts/project";
 import type { CreateProjectInput } from "@/lib/validation/projects";
 import { db } from "@/lib/database/client";
-import { feedbackItems, feedbackPhotos, projects } from "@/lib/database/schema";
+import {
+  feedbackItems,
+  feedbackPhotos,
+  photoCleanupJobs,
+  projects,
+} from "@/lib/database/schema";
 
 function serializeProject(row: {
   id: string;
@@ -19,7 +27,7 @@ function serializeProject(row: {
     feedbackCount: Number(row.feedbackCount),
     lastActivityAt: row.lastActivityAt?.toISOString() ?? null,
     createdAt: row.createdAt.toISOString(),
-    updatedAt: row.updatedAt.toISOString()
+    updatedAt: row.updatedAt.toISOString(),
   };
 }
 
@@ -33,12 +41,15 @@ export async function listProjects(): Promise<ProjectRecord[]> {
       feedbackCount: count(feedbackItems.id),
       lastActivityAt: activity,
       createdAt: projects.createdAt,
-      updatedAt: projects.updatedAt
+      updatedAt: projects.updatedAt,
     })
     .from(projects)
     .leftJoin(feedbackItems, eq(feedbackItems.projectId, projects.id))
     .groupBy(projects.id)
-    .orderBy(desc(sql`coalesce(${activity}, ${projects.updatedAt})`), projects.name);
+    .orderBy(
+      desc(sql`coalesce(${activity}, ${projects.updatedAt})`),
+      projects.name,
+    );
 
   return rows.map(serializeProject);
 }
@@ -60,7 +71,7 @@ export async function getProjectById(projectId: string) {
       feedbackCount: count(feedbackItems.id),
       lastActivityAt: activity,
       createdAt: projects.createdAt,
-      updatedAt: projects.updatedAt
+      updatedAt: projects.updatedAt,
     })
     .from(projects)
     .leftJoin(feedbackItems, eq(feedbackItems.projectId, projects.id))
@@ -80,7 +91,7 @@ export async function createProject(input: CreateProjectInput) {
   return serializeProject({
     ...project,
     feedbackCount: 0,
-    lastActivityAt: null
+    lastActivityAt: null,
   });
 }
 
@@ -93,14 +104,39 @@ export async function projectExists(projectId: string) {
   return Boolean(project);
 }
 
-export async function deleteProjectRecord(projectId: string) {
+export async function deleteProjectRecord(
+  projectId: string,
+  storageNamespace: string,
+) {
   return db.transaction(async (transaction) => {
+    await transaction
+      .select({ id: projects.id })
+      .from(projects)
+      .where(eq(projects.id, projectId))
+      .for("update");
+    await transaction
+      .select({ id: feedbackItems.id })
+      .from(feedbackItems)
+      .where(eq(feedbackItems.projectId, projectId))
+      .orderBy(feedbackItems.id)
+      .for("update");
     const photos = await transaction
       .select({ storageKey: feedbackPhotos.storageKey })
       .from(feedbackPhotos)
       .innerJoin(feedbackItems, eq(feedbackPhotos.feedbackId, feedbackItems.id))
       .where(eq(feedbackItems.projectId, projectId));
 
+    if (photos.length) {
+      await transaction
+        .insert(photoCleanupJobs)
+        .values(
+          photos.map((photo) => ({
+            storageKey: photo.storageKey,
+            storageNamespace,
+          })),
+        )
+        .onConflictDoNothing();
+    }
     const deletedFeedback = await transaction
       .delete(feedbackItems)
       .where(eq(feedbackItems.projectId, projectId))
@@ -114,7 +150,7 @@ export async function deleteProjectRecord(projectId: string) {
     return {
       deleted: Boolean(deletedProject),
       feedbackCount: deletedFeedback.length,
-      storageKeys: photos.map((photo) => photo.storageKey)
+      storageKeys: photos.map((photo) => photo.storageKey),
     };
   });
 }

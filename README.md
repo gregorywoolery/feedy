@@ -4,6 +4,8 @@ Feedy is a local-first feedback tracker for project reviews. Create projects, ad
 
 This release intentionally has **no authentication**. Anyone who can reach the application can view data, create projects and feedback, read photos, and download exports. Run it only in a trusted environment until authentication and authorization are added.
 
+I created this when Apple was taking too long with my account updates, since I couldn’t use their in-app feedback tool.
+
 ## What is implemented
 
 - Project creation and a project directory
@@ -21,7 +23,7 @@ This release intentionally has **no authentication**. Anyone who can reach the a
 - Docker images for the application and PostgreSQL, with persistent named volumes
 - Unit tests with Vitest and browser-flow coverage with Playwright
 
-Not implemented yet: sign-in, permissions, record editing, object-bucket storage, comments, notifications, or public sharing.
+Not implemented yet: sign-in, permissions, object-bucket storage, comments, notifications, or public sharing.
 
 ## Quick start: app on the host, PostgreSQL in Docker
 
@@ -69,24 +71,25 @@ npm run db:migrate   # apply checked-in Drizzle migrations
 npm run db:seed      # upsert example projects and feedback
 npm run db:generate  # generate a migration from schema changes
 npm run db:studio    # inspect the configured database with Drizzle Studio
+npm run storage:cleanup # retry pending photo deletion jobs
 ```
 
 ## Configuration
 
 The application reads one canonical PostgreSQL URL. Direct URL precedence is `DATABASE_URL`, then `POSTGRES_URL`, then `SUPABASE_DB_URL`; split `SUPABASE_DB_*` values are used only when none of those is set.
 
-| Variable | Purpose | Default or note |
-| --- | --- | --- |
-| `DATABASE_URL` | PostgreSQL URL for host development and deployed app processes | Required outside tests unless another accepted database variable is set |
-| `DOCKER_DATABASE_URL` | Database URL injected into the app container | Defaults to the bundled `db` service; set this for external/Supabase Postgres |
-| `DATABASE_SCHEMA` | PostgreSQL schema for application tables | `public`; use `feedy` to isolate tables in a shared database |
-| `STORAGE_DRIVER` | Photo storage adapter | `local` for persistent disk or `database` for PostgreSQL-backed bytes |
-| `UPLOAD_DIR` | Directory for photo bytes | `./data/uploads` on the host; `/app/data/uploads` in Docker |
-| `STORAGE_URL` | Optional external storage base URL retained for future object-storage integration | Not used by the current local/database adapters |
-| `DATABASE_POOL_SIZE` | Maximum PostgreSQL connections per client | `10`; use `1` for the transient Vercel/Supabase clients |
-| `DATABASE_MAX_LIFETIME_SECONDS` | Maximum lifetime of a PostgreSQL client connection | `1800`; use a short value such as `15` on serverless deployments |
-| `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_PORT` | Bundled PostgreSQL service | `feedy`, `feedy`, `feedy`, `5433` |
-| `APP_PORT` | Host port for the app container | `3000` |
+| Variable                                                             | Purpose                                                                           | Default or note                                                               |
+| -------------------------------------------------------------------- | --------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| `DATABASE_URL`                                                       | PostgreSQL URL for host development and deployed app processes                    | Required outside tests unless another accepted database variable is set       |
+| `DOCKER_DATABASE_URL`                                                | Database URL injected into the app container                                      | Defaults to the bundled `db` service; set this for external/Supabase Postgres |
+| `DATABASE_SCHEMA`                                                    | PostgreSQL schema for application tables                                          | `public`; use `feedy` to isolate tables in a shared database                  |
+| `STORAGE_DRIVER`                                                     | Photo storage adapter                                                             | `local` for persistent disk or `database` for PostgreSQL-backed bytes         |
+| `UPLOAD_DIR`                                                         | Directory for photo bytes                                                         | `./data/uploads` on the host; `/app/data/uploads` in Docker                   |
+| `STORAGE_URL`                                                        | Optional external storage base URL retained for future object-storage integration | Not used by the current local/database adapters                               |
+| `DATABASE_POOL_SIZE`                                                 | Maximum PostgreSQL connections per client                                         | `10`; use `1` for the transient Vercel/Supabase clients                       |
+| `DATABASE_MAX_LIFETIME_SECONDS`                                      | Maximum lifetime of a PostgreSQL client connection                                | `1800`; use a short value such as `15` on serverless deployments              |
+| `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_PORT` | Bundled PostgreSQL service                                                        | `feedy`, `feedy`, `feedy`, `5433`                                             |
+| `APP_PORT`                                                           | Host port for the app container                                                   | `3000`                                                                        |
 
 See [.env.example](.env.example) for the complete set, including split Supabase credentials.
 
@@ -99,3 +102,15 @@ See [.env.example](.env.example) for the complete set, including split Supabase 
 5. [Testing](docs/05-testing.md)
 6. [Docker and local PostgreSQL](docs/06-docker-and-local-postgresql.md)
 7. [Switching to Supabase-compatible Postgres](docs/07-supabase-postgres.md)
+
+## Safety and maintenance
+
+Docker publishes the app and database on `127.0.0.1` only. This release has no sign-in: keep it in a trusted local environment. If a reverse proxy changes the public origin, set `APP_ORIGIN` to the exact browser origin (scheme, host and optional port).
+
+External database connections use certificate-verified TLS. Legacy `sslmode=require`, `allow` and `prefer` URLs are upgraded to `verify-full`; local `sslmode=disable` remains available. If your provider requires a custom CA, supply it using Node's `NODE_EXTRA_CA_CERTS` configuration.
+
+PDF exports allow up to 100 selected or 500 filtered records, with at most 100 photos and 50 MiB of stored image bytes. One export runs per application process at a time.
+
+Run `npm run storage:cleanup` periodically to retry pending photo deletions. See [storage maintenance](docs/03-storage-and-photos.md) for interrupted uploads and storage changes.
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for architecture and verification commands and [SECURITY.md](SECURITY.md) for security reporting. Feedy is available under the [MIT license](LICENSE).
