@@ -36,6 +36,26 @@ jobs:
       - run: npm test
       - run: npm run db:migrate
       - run: npm run test:integration
-      - run: npm run build
+      - name: Build production container
+        run: docker build --tag feedy:ci .
       - run: npx playwright install --with-deps chromium
+      - name: Start production container
+        run: |
+          docker run --detach --name feedy-ci --network host --env DATABASE_URL --env STORAGE_DRIVER feedy:ci
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:3000/ > /dev/null; then
+              exit 0
+            fi
+            sleep 2
+          done
+          docker logs feedy-ci
+          exit 1
       - run: npm run test:e2e
+        env:
+          PLAYWRIGHT_BASE_URL: http://127.0.0.1:3000
+      - name: Container logs
+        if: failure()
+        run: docker logs feedy-ci || true
+      - name: Stop production container
+        if: always()
+        run: docker rm --force feedy-ci || true
