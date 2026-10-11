@@ -14,6 +14,10 @@ import {
 import { PhotoValidationError } from "@/entities/photos";
 import { ProjectNotFoundError } from "@/use-cases/feedback/create-feedback";
 import { FeedbackDeleteNotFoundError } from "@/use-cases/feedback/delete-feedback";
+import {
+  createFeedbackFieldsSchema,
+  deleteFeedbackSchema,
+} from "@/lib/validation/feedback";
 
 export const runtime = "nodejs";
 
@@ -23,12 +27,12 @@ export async function POST(request: Request) {
     const photos = formData
       .getAll("photos")
       .filter((value): value is File => value instanceof File);
-    const feedback = await createFeedback({
+    const fields = createFeedbackFieldsSchema.parse({
       projectId: formData.get("projectId"),
       projectVersion: formData.get("projectVersion"),
       description: formData.get("description"),
-      photos,
     });
+    const feedback = await createFeedback({ ...fields, photos });
     return Response.json(feedback, { status: 201 });
   } catch (error) {
     if (error instanceof RequestInputError)
@@ -55,7 +59,8 @@ export async function POST(request: Request) {
 
 export async function DELETE(request: Request) {
   try {
-    const result = await deleteFeedback(await readJsonInput(request));
+    const input = deleteFeedbackSchema.parse(await readJsonInput(request));
+    const result = await deleteFeedback(input);
     return Response.json(result);
   } catch (error) {
     if (error instanceof RequestInputError)

@@ -1,7 +1,11 @@
 import { presentFeedback } from "@/use-cases/present-feedback";
 import type { StoredPhotoInput } from "@/entities/photos";
 import type { ApplicationDependencies } from "@/use-cases/ports";
-import { createFeedbackFieldsSchema } from "@/lib/validation/feedback";
+import type { CreateFeedbackFields } from "@/lib/validation/feedback";
+
+export interface CreateFeedbackInput extends CreateFeedbackFields {
+  photos: File[];
+}
 
 export class ProjectNotFoundError extends Error {
   constructor() {
@@ -11,20 +15,11 @@ export class ProjectNotFoundError extends Error {
 }
 
 export async function createFeedbackUseCase(
-  input: {
-    projectId: unknown;
-    projectVersion: unknown;
-    description: unknown;
-    photos: File[];
-  },
+  input: CreateFeedbackInput,
   dependencies: ApplicationDependencies,
 ) {
-  const fields = createFeedbackFieldsSchema.parse({
-    projectId: input.projectId,
-    projectVersion: input.projectVersion,
-    description: input.description,
-  });
-  if (!(await dependencies.projects.projectExists(fields.projectId)))
+  const { projectId, projectVersion, description } = input;
+  if (!(await dependencies.projects.projectExists(projectId)))
     throw new ProjectNotFoundError();
 
   const photos = await dependencies.normalizePhotos(input.photos);
@@ -45,7 +40,9 @@ export async function createFeedbackUseCase(
     }
 
     feedbackId = await dependencies.feedback.createFeedbackRecord({
-      ...fields,
+      projectId,
+      projectVersion,
+      description,
       photos: stored,
     });
   } catch (error) {

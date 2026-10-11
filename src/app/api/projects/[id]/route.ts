@@ -7,6 +7,7 @@ import {
   validationErrorResponse,
 } from "@/lib/http/api-response";
 import { ProjectDeleteNotFoundError } from "@/use-cases/projects/delete-project";
+import { projectIdSchema } from "@/lib/validation/projects";
 
 export const runtime = "nodejs";
 
@@ -18,7 +19,8 @@ export async function DELETE(
 
   try {
     assertSameOrigin(request);
-    return Response.json(await deleteProject(id));
+    const projectId = projectIdSchema.parse(id);
+    return Response.json(await deleteProject(projectId));
   } catch (error) {
     if (error instanceof RequestInputError)
       return errorResponse(error.status, error.code, error.message);

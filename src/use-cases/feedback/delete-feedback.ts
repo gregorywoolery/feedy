@@ -1,5 +1,5 @@
 import type { ApplicationDependencies } from "@/use-cases/ports";
-import { deleteFeedbackSchema } from "@/lib/validation/feedback";
+import type { DeleteFeedbackInput } from "@/lib/validation/feedback";
 
 export class FeedbackDeleteNotFoundError extends Error {
   constructor() {
@@ -9,10 +9,10 @@ export class FeedbackDeleteNotFoundError extends Error {
 }
 
 export async function deleteFeedbackUseCase(
-  input: unknown,
+  input: DeleteFeedbackInput,
   dependencies: ApplicationDependencies,
 ) {
-  const { ids } = deleteFeedbackSchema.parse(input);
+  const { ids } = input;
   const result = await dependencies.feedback.deleteFeedbackRecords(
     ids,
     dependencies.storage.namespace,

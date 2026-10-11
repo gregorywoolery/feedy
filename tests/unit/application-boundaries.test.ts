@@ -2,6 +2,8 @@
 import { describe, expect, it, vi } from "vitest";
 import { testDependencies } from "../helpers/application";
 import { createFeedbackUseCase } from "@/use-cases/feedback/create-feedback";
+import { updateFeedbackUseCase } from "@/use-cases/feedback/update-feedback";
+import { PhotoValidationError } from "@/entities/photos";
 import { getExportRecords } from "@/use-cases/exports/get-export-records";
 import {
   MAX_EXPORT_BYTES,
@@ -31,6 +33,55 @@ const record = {
 };
 
 describe("application boundaries", () => {
+  it("checks that the project exists before processing photos", async () => {
+    const deps = testDependencies();
+    vi.mocked(deps.projects.projectExists).mockResolvedValue(false);
+    await expect(
+      createFeedbackUseCase(
+        { projectId, projectVersion: "1", description: "Test", photos: [] },
+        deps,
+      ),
+    ).rejects.toThrow("The selected project no longer exists.");
+    expect(deps.normalizePhotos).not.toHaveBeenCalled();
+    expect(deps.feedback.createFeedbackRecord).not.toHaveBeenCalled();
+  });
+  it("rejects unmatched new photo IDs before processing an edit", async () => {
+    const deps = testDependencies();
+    await expect(
+      updateFeedbackUseCase(
+        {
+          feedbackId: record.id,
+          projectVersion: "2",
+          description: "Edit",
+          photoOrder: [],
+          newPhotoIds: [projectId],
+          newPhotos: [],
+        },
+        deps,
+      ),
+    ).rejects.toBeInstanceOf(PhotoValidationError);
+    expect(deps.feedback.getFeedbackById).not.toHaveBeenCalled();
+    expect(deps.normalizePhotos).not.toHaveBeenCalled();
+  });
+  it("rejects a photo that belongs to another feedback record", async () => {
+    const deps = testDependencies();
+    vi.mocked(deps.feedback.getFeedbackById).mockResolvedValue(record);
+    await expect(
+      updateFeedbackUseCase(
+        {
+          feedbackId: record.id,
+          projectVersion: "2",
+          description: "Edit",
+          photoOrder: [{ kind: "existing", id: projectId }],
+          newPhotoIds: [],
+          newPhotos: [],
+        },
+        deps,
+      ),
+    ).rejects.toThrow("The photo order is invalid.");
+    expect(deps.normalizePhotos).not.toHaveBeenCalled();
+    expect(deps.feedback.updateFeedbackRecord).not.toHaveBeenCalled();
+  });
   it("compensates saved bytes when the metadata transaction fails", async () => {
     const deps = testDependencies();
     vi.mocked(deps.projects.projectExists).mockResolvedValue(true);

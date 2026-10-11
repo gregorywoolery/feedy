@@ -6,6 +6,7 @@ import {
 } from "@/lib/http/api-response";
 import { readJsonInput, RequestInputError } from "@/lib/http/request-input";
 import { pdfResponse } from "@/lib/http/pdf-response";
+import { exportFeedbackSchema } from "@/lib/validation/feedback";
 import { FeedbackExportNotFoundError } from "@/use-cases/exports/get-export-records";
 import {
   ExportLimitError,
@@ -17,9 +18,8 @@ export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
   try {
-    const { pdf, filename } = await exportFeedback(
-      await readJsonInput(request),
-    );
+    const input = exportFeedbackSchema.parse(await readJsonInput(request));
+    const { pdf, filename } = await exportFeedback(input);
     return pdfResponse(pdf, filename);
   } catch (error) {
     if (error instanceof RequestInputError)

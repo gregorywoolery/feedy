@@ -1,6 +1,7 @@
 import { createProject } from "@/server/application";
 import { readJsonInput, RequestInputError } from "@/lib/http/request-input";
 import { ZodError } from "zod";
+import { createProjectSchema } from "@/lib/validation/projects";
 
 import {
   errorResponse,
@@ -11,7 +12,8 @@ export const runtime = "nodejs";
 
 export async function POST(request: Request) {
   try {
-    const project = await createProject(await readJsonInput(request));
+    const input = createProjectSchema.parse(await readJsonInput(request));
+    const project = await createProject(input);
     return Response.json(project, { status: 201 });
   } catch (error) {
     if (error instanceof RequestInputError)

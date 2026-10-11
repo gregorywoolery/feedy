@@ -1,11 +1,8 @@
 import { presentFeedback } from "@/use-cases/present-feedback";
 import type { ApplicationDependencies } from "@/use-cases/ports";
-import { z } from "zod";
-
-import {
-  feedbackIdSchema,
-  updateFeedbackFieldsSchema,
-  updateFeedbackPhotoOrderSchema,
+import type {
+  UpdateFeedbackFields,
+  UpdateFeedbackPhotoOrder,
 } from "@/lib/validation/feedback";
 import { MAX_TOTAL_PHOTO_BYTES } from "@/lib/validation/photo-limits";
 import {
@@ -16,21 +13,24 @@ import {
 
 export class FeedbackUpdateNotFoundError extends Error {}
 
+export interface UpdateFeedbackInput extends UpdateFeedbackFields {
+  feedbackId: string;
+  photoOrder: UpdateFeedbackPhotoOrder;
+  newPhotoIds: string[];
+  newPhotos: File[];
+}
+
 export async function updateFeedbackUseCase(
-  input: {
-    feedbackId: unknown;
-    projectVersion: unknown;
-    description: unknown;
-    photoOrder: unknown;
-    newPhotoIds: unknown[];
-    newPhotos: File[];
-  },
+  input: UpdateFeedbackInput,
   dependencies: ApplicationDependencies,
 ) {
-  const feedbackId = feedbackIdSchema.parse(input.feedbackId);
-  const fields = updateFeedbackFieldsSchema.parse(input);
-  const order = updateFeedbackPhotoOrderSchema.parse(input.photoOrder);
-  const newIds = z.array(z.string().uuid()).parse(input.newPhotoIds);
+  const {
+    feedbackId,
+    projectVersion,
+    description,
+    photoOrder: order,
+    newPhotoIds: newIds,
+  } = input;
   if (
     newIds.length !== input.newPhotos.length ||
     new Set(newIds).size !== newIds.length
@@ -84,7 +84,8 @@ export async function updateFeedbackUseCase(
     }
     const result = await dependencies.feedback.updateFeedbackRecord({
       feedbackId,
-      ...fields,
+      projectVersion,
+      description,
       expectedPhotoIds: [...currentIds],
       retainedPhotos: orderedExisting.map((photo) => ({
         id: photo.id,

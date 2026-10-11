@@ -1,10 +1,9 @@
 import type { ApplicationDependencies } from "@/use-cases/ports";
-import { createProjectSchema } from "@/lib/validation/projects";
+import type { CreateProjectInput } from "@/lib/validation/projects";
 
 export async function createProjectUseCase(
-  input: unknown,
+  input: CreateProjectInput,
   dependencies: ApplicationDependencies,
 ) {
-  const values = createProjectSchema.parse(input);
-  return dependencies.projects.createProject(values);
+  return dependencies.projects.createProject(input);
 }

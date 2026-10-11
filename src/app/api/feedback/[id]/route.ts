@@ -11,6 +11,12 @@ import {
 } from "@/lib/http/api-response";
 import { PhotoValidationError } from "@/entities/photos";
 import { FeedbackUpdateNotFoundError } from "@/use-cases/feedback/update-feedback";
+import {
+  feedbackIdSchema,
+  updateFeedbackFieldsSchema,
+  updateFeedbackNewPhotoIdsSchema,
+  updateFeedbackPhotoOrderSchema,
+} from "@/lib/validation/feedback";
 
 export const runtime = "nodejs";
 
@@ -23,16 +29,28 @@ export async function PATCH(
     const formData = await readMultipartInput(request);
     const rawOrder = formData.get("photoOrder");
     if (typeof rawOrder !== "string") throw new SyntaxError();
-    const files = formData.getAll("newPhotos");
-    if (files.some((value) => !(value instanceof File)))
-      throw new PhotoValidationError("The photo upload is invalid.");
-    const feedback = await updateFeedback({
-      feedbackId: id,
+    const newPhotos: File[] = [];
+    for (const value of formData.getAll("newPhotos")) {
+      if (!(value instanceof File))
+        throw new PhotoValidationError("The photo upload is invalid.");
+      newPhotos.push(value);
+    }
+    const rawPhotoOrder: unknown = JSON.parse(rawOrder);
+    const feedbackId = feedbackIdSchema.parse(id);
+    const fields = updateFeedbackFieldsSchema.parse({
       projectVersion: formData.get("projectVersion"),
       description: formData.get("description"),
-      photoOrder: JSON.parse(rawOrder),
-      newPhotoIds: formData.getAll("newPhotoIds"),
-      newPhotos: files as File[],
+    });
+    const photoOrder = updateFeedbackPhotoOrderSchema.parse(rawPhotoOrder);
+    const newPhotoIds = updateFeedbackNewPhotoIdsSchema.parse(
+      formData.getAll("newPhotoIds"),
+    );
+    const feedback = await updateFeedback({
+      feedbackId,
+      ...fields,
+      photoOrder,
+      newPhotoIds,
+      newPhotos,
     });
     return Response.json(feedback);
   } catch (error) {

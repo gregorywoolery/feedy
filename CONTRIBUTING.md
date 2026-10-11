@@ -25,11 +25,11 @@ Apply migrations to that database first. Never run integration or browser tests 
 Keep functions small and names descriptive. Prefer ordinary functions and explicit dependency objects over frameworks, decorators or clever generic abstractions. Extract logic when it has a clear responsibility, not just to add another layer.
 
 - `src/entities`: browser-safe domain types, storage interfaces and API contracts.
-- `src/use-cases`: application workflows and query orchestration; dependencies are explicit ports.
+- `src/use-cases`: application workflows and business rules; inputs are typed and dependencies are explicit ports.
 - `src/server`: wires repositories, storage and image/PDF processing into those ports.
 - `src/data-access`: parameterized SQL and metadata transactions.
 - `src/lib`: focused infrastructure and shared utilities.
-- `src/app`: transport parsing, status/response mapping, page composition.
+- `src/app`: transport parsing and input validation, status/response mapping, page composition.
 - `src/features`: client state, HTTP operations and presentation.
 
 ESLint enforces these import boundaries. Preserve public response shapes when refactoring. Add regression tests for failures and recovery, not only success paths.

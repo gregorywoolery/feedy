@@ -69,6 +69,18 @@ export default defineConfig([
           patterns: [
             {
               group: [
+                "zod",
+                "@/lib/validation/feedback",
+                "@/lib/validation/projects",
+                "**/lib/validation/feedback",
+                "**/lib/validation/projects",
+              ],
+              allowTypeImports: true,
+              message:
+                "Validate request shapes in route handlers. Use cases receive typed inputs and enforce business rules.",
+            },
+            {
+              group: [
                 "@/server/**",
                 "@/data-access/**",
                 "@/lib/database/**",

@@ -1,7 +1,7 @@
 // @vitest-environment node
 
 import sharp from "sharp";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import {
   MAX_PHOTO_BYTES,
@@ -11,25 +11,15 @@ import {
 } from "@/lib/validation/photos";
 
 function fileFromBytes(bytes: Uint8Array, name: string, type = ""): File {
-  const copy = Uint8Array.from(bytes);
-  return {
-    name,
-    type,
-    size: copy.byteLength,
-    arrayBuffer: async () =>
-      copy.buffer.slice(copy.byteOffset, copy.byteOffset + copy.byteLength),
-  } as File;
+  return new File([Uint8Array.from(bytes)], name, { type });
 }
 
 function sizedFile(size: number, name = "photo.png"): File {
-  return {
-    name,
-    type: "image/png",
-    size,
-    arrayBuffer: async () => {
-      throw new Error("size validation should happen before bytes are read");
-    },
-  } as unknown as File;
+  const file = new File([new Uint8Array(size)], name, { type: "image/png" });
+  vi.spyOn(file, "arrayBuffer").mockRejectedValue(
+    new Error("size validation should happen before bytes are read"),
+  );
+  return file;
 }
 
 async function imageBytes(

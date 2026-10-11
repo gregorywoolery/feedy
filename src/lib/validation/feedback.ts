@@ -22,6 +22,7 @@ export const createFeedbackFieldsSchema = z.object({
 });
 
 export const updateFeedbackFieldsSchema = z.object(feedbackTextFields);
+export const updateFeedbackNewPhotoIdsSchema = z.array(z.string().uuid());
 export const updateFeedbackPhotoOrderSchema = z
   .array(
     z.discriminatedUnion("kind", [
@@ -133,3 +134,9 @@ export const exportFeedbackSchema = z.union([
 ]);
 
 export type CreateFeedbackFields = z.infer<typeof createFeedbackFieldsSchema>;
+export type UpdateFeedbackFields = z.infer<typeof updateFeedbackFieldsSchema>;
+export type UpdateFeedbackPhotoOrder = z.infer<
+  typeof updateFeedbackPhotoOrderSchema
+>;
+export type DeleteFeedbackInput = z.infer<typeof deleteFeedbackSchema>;
+export type ExportFeedbackInput = z.infer<typeof exportFeedbackSchema>;

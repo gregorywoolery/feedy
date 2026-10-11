@@ -1,5 +1,5 @@
 import type { ApplicationDependencies } from "@/use-cases/ports";
-import { exportFeedbackSchema } from "@/lib/validation/feedback";
+import type { ExportFeedbackInput } from "@/lib/validation/feedback";
 import {
   batchExportFilename,
   singleExportFilename,
@@ -11,17 +11,16 @@ import {
 import { ExportLimitError, MAX_FILTERED_EXPORT_RECORDS } from "./export-limits";
 
 export async function exportFeedbackUseCase(
-  input: unknown,
+  input: ExportFeedbackInput,
   dependencies: ApplicationDependencies,
   single = false,
 ) {
-  const selection = exportFeedbackSchema.parse(input);
   let ids: string[];
-  if ("ids" in selection) {
-    ids = selection.ids;
+  if ("ids" in input) {
+    ids = input.ids;
   } else {
     const result = await dependencies.feedback.listFeedbackIds(
-      { ...selection.query, page: 1, pageSize: 100 },
+      { ...input.query, page: 1, pageSize: 100 },
       MAX_FILTERED_EXPORT_RECORDS,
     );
     if (result.exceedsMaximum)

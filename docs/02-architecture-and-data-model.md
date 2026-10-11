@@ -25,8 +25,9 @@ Typical feedback creation follows this path:
 ```text
 Feedback side sheet
   -> POST /api/feedback (multipart FormData)
+  -> validate request fields and build a typed input
   -> createFeedbackUseCase
-  -> validate fields and confirm project
+  -> confirm project
   -> validate/normalize images
   -> write photo bytes through PhotoStorage
   -> insert feedback + photo metadata in one DB transaction
@@ -111,5 +112,9 @@ Route handlers return structured JSON errors for invalid data, missing records, 
 ## Enforced boundaries
 
 Use cases depend on application-owned ports in `src/use-cases/ports.ts`. The server composition module supplies repositories, photo storage, normalization, PDF rendering and cleanup. Pages call application queries rather than assembling repositories directly. Photo URL presentation is outside persistence.
+
+Route handlers validate JSON, multipart fields and route IDs before calling the application. Input types are derived from the Zod schemas so runtime validation and TypeScript contracts stay in sync. Use cases receive named, typed inputs and enforce business rules such as project existence, photo ownership and export limits. ESLint permits schema type imports in use cases but prevents runtime schema imports there.
+
+`unknown` stays at untrusted boundaries such as JSON parsing, browser storage and error handling. A TypeScript type alone does not validate external data.
 
 Metadata changes and pending photo deletions are committed together. `photo_cleanup_jobs` retains the storage key and adapter namespace until deletion succeeds. This is an explicit recovery protocol across independent storage systems, not a distributed transaction. Filesystem and database storage use the same protocol.

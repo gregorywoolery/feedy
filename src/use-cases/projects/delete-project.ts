@@ -1,5 +1,4 @@
 import type { ApplicationDependencies } from "@/use-cases/ports";
-import { projectIdSchema } from "@/lib/validation/projects";
 
 export class ProjectDeleteNotFoundError extends Error {
   constructor() {
@@ -9,12 +8,11 @@ export class ProjectDeleteNotFoundError extends Error {
 }
 
 export async function deleteProjectUseCase(
-  projectId: unknown,
+  projectId: string,
   dependencies: ApplicationDependencies,
 ) {
-  const id = projectIdSchema.parse(projectId);
   const result = await dependencies.projects.deleteProjectRecord(
-    id,
+    projectId,
     dependencies.storage.namespace,
   );
   if (!result.deleted) throw new ProjectDeleteNotFoundError();
