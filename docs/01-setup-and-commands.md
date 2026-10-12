@@ -49,6 +49,8 @@ Optional connection tuning is available through:
 - `DATABASE_IDLE_TIMEOUT_SECONDS` (default `20`)
 - `DATABASE_CONNECT_TIMEOUT_SECONDS` (default `10`)
 - `DATABASE_MAX_LIFETIME_SECONDS` (default `1800`; set to `15` on Vercel)
+- `DATABASE_QUERY_TIMEOUT_SECONDS` (default `15`; bounds each runtime query)
+- `DATABASE_CA_CERT` (optional provider PEM root certificate for verified TLS)
 - `DATABASE_SCHEMA` (default `public`; useful for isolating Feedy in a shared database)
 
 All three must be positive integers. Prepared statements are disabled by the database client for compatibility with pooled PostgreSQL connections.

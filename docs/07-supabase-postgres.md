@@ -71,9 +71,11 @@ The seed upserts fixed UUIDs and is repeatable. Avoid it if those example record
 
 ## Connection behavior
 
-The client reads SSL from the URL, disables prepared statements, and uses a default pool size of 10. Local, Docker and Vercel runtimes reuse one bounded Postgres.js pool per warm process. On Vercel, use `DATABASE_POOL_SIZE=1` to avoid opening many independent sockets against Supabase's shared transaction pooler. Tune `DATABASE_IDLE_TIMEOUT_SECONDS` and `DATABASE_CONNECT_TIMEOUT_SECONDS` as needed. Set `DATABASE_MAX_LIFETIME_SECONDS=15` on Vercel as an additional bound on transaction-pool sockets.
+The application uses a `node-postgres` pool through Drizzle's PostgreSQL adapter. Local, Docker and Vercel runtimes reuse one bounded pool per warm process. Vercel's `attachDatabasePool` integration releases idle clients before a function suspends. On Vercel, use `DATABASE_POOL_SIZE=1` to avoid opening many independent sockets against Supabase's shared transaction pooler.
 
-Application SQL schema-qualifies every table (for example, `feedy.projects`) and sends no session startup parameters instead of depending on a session `search_path`. This is important with transaction pooling because upstream PostgreSQL sessions can be reused between clients. Migration and seed commands still establish the target search path while applying unqualified checked-in SQL.
+Tune `DATABASE_IDLE_TIMEOUT_SECONDS` and `DATABASE_CONNECT_TIMEOUT_SECONDS` as needed. Set `DATABASE_MAX_LIFETIME_SECONDS=15` on Vercel as an additional bound on transaction-pool sockets. Runtime queries time out after `DATABASE_QUERY_TIMEOUT_SECONDS` (default `15`) instead of leaving the page waiting indefinitely. Migration and seed commands continue to use Postgres.js with prepared statements disabled.
+
+Application SQL schema-qualifies every table (for example, `feedy.projects`) instead of depending on a session `search_path`. This is important with transaction pooling because upstream PostgreSQL sessions can be reused between clients. Migration and seed commands still establish the target search path while applying unqualified checked-in SQL.
 
 Use a database user that can create the migration tables and application records. Keep the URL server-side; it is not a browser/public Supabase key.
 

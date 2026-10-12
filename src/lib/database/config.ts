@@ -1,17 +1,17 @@
-import type postgres from "postgres";
+import type { ConnectionOptions } from "node:tls";
+import type { PoolConfig } from "pg";
 
 export type DatabaseEnvironment = Readonly<Record<string, string | undefined>>;
 
-export type DatabaseConnectionOptions = Pick<
-  postgres.Options<Record<string, postgres.PostgresType>>,
-  | "connect_timeout"
-  | "connection"
-  | "idle_timeout"
-  | "max"
-  | "max_lifetime"
-  | "prepare"
-  | "ssl"
->;
+export interface DatabaseConnectionOptions {
+  connect_timeout: number;
+  connection: { application_name: string; search_path: string };
+  idle_timeout: number;
+  max: number;
+  max_lifetime: number;
+  prepare: false;
+  ssl: false | "verify-full" | ConnectionOptions;
+}
 
 const DATABASE_SCHEMA_PATTERN = /^[a-z][a-z0-9_]{0,62}$/;
 
@@ -285,5 +285,33 @@ export function getDatabaseConnectionOptions(
         .filter((value, index, values) => values.indexOf(value) === index)
         .join(","),
     },
+  };
+}
+
+/** Runtime pools use explicit SSL options so URL flags cannot replace the CA. */
+export function getDatabasePoolOptions(
+  databaseUrl = getDatabaseUrl(),
+  environment: DatabaseEnvironment = process.env,
+): PoolConfig {
+  const connection = getDatabaseConnectionOptions(databaseUrl, environment);
+  const url = new URL(databaseUrl);
+  for (const key of ["sslmode", "sslcert", "sslkey", "sslrootcert"]) {
+    url.searchParams.delete(key);
+  }
+
+  return {
+    connectionString: url.toString(),
+    max: connection.max,
+    connectionTimeoutMillis: connection.connect_timeout * 1000,
+    idleTimeoutMillis: connection.idle_timeout * 1000,
+    maxLifetimeSeconds: connection.max_lifetime,
+    query_timeout:
+      readPositiveInteger(environment, "DATABASE_QUERY_TIMEOUT_SECONDS", 15) *
+      1000,
+    allowExitOnIdle: true,
+    ssl:
+      connection.ssl === "verify-full"
+        ? { rejectUnauthorized: true }
+        : connection.ssl,
   };
 }

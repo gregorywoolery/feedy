@@ -6,7 +6,7 @@ import { randomUUID } from "node:crypto";
 import path from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
-import { db, getSqlClient } from "@/lib/database/client";
+import { db, getDatabasePool } from "@/lib/database/client";
 import { photoCleanupJobs } from "@/lib/database/schema";
 import * as feedback from "@/data-access/feedback/feedback-repository";
 import * as projects from "@/data-access/projects/project-repository";
@@ -24,7 +24,7 @@ const metadata = {
   sortOrder: 0,
 };
 afterAll(async () => {
-  await getSqlClient().end();
+  await getDatabasePool().end();
 });
 
 describe("persistent photo lifecycle", () => {
@@ -206,24 +206,24 @@ describe("persistent photo lifecycle", () => {
       uploadDir: path.join(directory, "uploads"),
     });
     const schema = `maintenance_${randomUUID().replaceAll("-", "")}`;
-    const sql = getSqlClient();
+    const pool = getDatabasePool();
     try {
-      await sql.unsafe(`CREATE SCHEMA "${schema}"`);
-      await sql.unsafe(
+      await pool.query(`CREATE SCHEMA "${schema}"`);
+      await pool.query(
         `CREATE TABLE "${schema}".feedback_photos (id uuid, storage_key text)`,
       );
-      await sql.unsafe(
+      await pool.query(
         `CREATE TABLE "${schema}".photo_cleanup_jobs (storage_key text PRIMARY KEY, storage_namespace text, created_at timestamptz DEFAULT now())`,
       );
       const { key } = await storage.put({
         bytes: new Uint8Array([1]),
         mimeType: "image/png",
       });
-      await sql.unsafe(
+      await pool.query(
         `INSERT INTO "${schema}".feedback_photos VALUES ($1, $2)`,
         [randomUUID(), key],
       );
-      await sql.unsafe(
+      await pool.query(
         `INSERT INTO "${schema}".photo_cleanup_jobs (storage_key, storage_namespace) VALUES ($1, $2)`,
         [key, storage.namespace],
       );
@@ -255,10 +255,10 @@ describe("persistent photo lifecycle", () => {
         ).resolves.toBeUndefined();
       }
       expect(
-        await sql.unsafe(`SELECT * FROM "${schema}".photo_cleanup_jobs`),
+        (await pool.query(`SELECT * FROM "${schema}".photo_cleanup_jobs`)).rows,
       ).toHaveLength(0);
     } finally {
-      await sql.unsafe(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`);
+      await pool.query(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`);
       await rm(directory, { recursive: true, force: true });
     }
   }, 20000);

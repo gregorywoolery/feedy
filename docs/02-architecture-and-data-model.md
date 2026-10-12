@@ -2,7 +2,7 @@
 
 ## Runtime shape
 
-Feedy is a Next.js App Router application with server-rendered data pages and client components for interactive sheets, filters, selection, deletion, downloads, and recent-project preferences. PostgreSQL is accessed through Drizzle ORM and `postgres.js`. Photo bytes can live on local disk or in the same PostgreSQL database.
+Feedy is a Next.js App Router application with server-rendered data pages and client components for interactive sheets, filters, selection, deletion, downloads, and recent-project preferences. The application accesses PostgreSQL through Drizzle ORM and a `node-postgres` pool; migration and seed commands use Postgres.js. Photo bytes can live on local disk or in the same PostgreSQL database.
 
 The main source boundaries are:
 

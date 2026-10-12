@@ -1,49 +1,43 @@
-import { drizzle } from "drizzle-orm/postgres-js";
-import postgres from "postgres";
+import { drizzle } from "drizzle-orm/node-postgres";
+import { Pool } from "pg";
+import { attachDatabasePool } from "@vercel/functions";
 
-import {
-  getDatabaseConnectionOptions,
-  getDatabaseUrl,
-} from "@/lib/database/config";
+import { getDatabasePoolOptions, getDatabaseUrl } from "@/lib/database/config";
 import * as schema from "@/lib/database/schema";
 
 function createDatabaseConnection() {
   const databaseUrl = getDatabaseUrl();
-  const options = { ...getDatabaseConnectionOptions(databaseUrl) };
-  // Application tables are schema-qualified in Drizzle. Supabase's
-  // transaction pooler can reuse upstream sessions between clients, so the
-  // application runtime deliberately sends no session startup parameters.
-  delete options.connection;
-  const sqlClient = postgres(databaseUrl, options);
+  const pool = new Pool(getDatabasePoolOptions(databaseUrl));
+  pool.on("error", (error) => {
+    console.error("An idle database connection failed.", error);
+  });
+  // Vercel keeps the runtime alive until idle clients have been released.
+  if (process.env.VERCEL) attachDatabasePool(pool);
 
   return {
-    sqlClient,
-    database: drizzle(sqlClient, { schema }),
+    pool,
+    database: drizzle(pool, { schema }),
   };
 }
 
 type DatabaseConnection = ReturnType<typeof createDatabaseConnection>;
 
 declare global {
-  var __feedyDatabaseConnection__: DatabaseConnection | undefined;
+  var __feedyPgConnection__: DatabaseConnection | undefined;
 }
 
 function getConnection(): DatabaseConnection {
-  // Reuse one bounded pool per warm runtime. Creating a client for every
-  // repository call leaves many independent idle sockets behind and can
-  // exhaust Supabase's shared transaction-pooler limit during image bursts.
-  // Postgres.js still retires idle and old connections using the configured
-  // idle_timeout and max_lifetime values.
-  globalThis.__feedyDatabaseConnection__ ??= createDatabaseConnection();
-  return globalThis.__feedyDatabaseConnection__;
+  // One bounded pool serves all repository calls in a warm runtime.
+  globalThis.__feedyPgConnection__ ??= createDatabaseConnection();
+  return globalThis.__feedyPgConnection__;
 }
 
 export function getDatabaseClient() {
   return getConnection().database;
 }
 
-export function getSqlClient() {
-  return getConnection().sqlClient;
+export function getDatabasePool() {
+  return getConnection().pool;
 }
 
 /**

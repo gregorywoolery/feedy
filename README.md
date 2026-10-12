@@ -89,6 +89,7 @@ The application reads one canonical PostgreSQL URL. Direct URL precedence is `DA
 | `STORAGE_URL`                                                        | Optional external storage base URL retained for future object-storage integration | Not used by the current local/database adapters                               |
 | `DATABASE_POOL_SIZE`                                                 | Maximum PostgreSQL connections per warm runtime                                   | `10`; use `1` for Vercel/Supabase deployments                                 |
 | `DATABASE_MAX_LIFETIME_SECONDS`                                      | Maximum lifetime of a PostgreSQL client connection                                | `1800`; use a short value such as `15` on serverless deployments              |
+| `DATABASE_QUERY_TIMEOUT_SECONDS`                                     | Maximum time an application database query may wait                               | `15`; a timeout produces a retryable error                                    |
 | `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_PORT` | Bundled PostgreSQL service                                                        | `feedy`, `feedy`, `feedy`, `5433`                                             |
 | `APP_PORT`                                                           | Host port for the app container                                                   | `3000`                                                                        |
 

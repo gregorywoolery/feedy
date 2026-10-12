@@ -1,5 +1,6 @@
 import {
   getDatabaseConnectionOptions,
+  getDatabasePoolOptions,
   getDatabaseSchema,
   getDatabaseUrl,
 } from "@/lib/database/config";
@@ -151,6 +152,28 @@ describe("database configuration", () => {
         { DATABASE_CA_CERT: "certificate" },
       ),
     ).toThrow("DATABASE_CA_CERT requires sslmode=verify-full.");
+  });
+
+  it("keeps verified TLS settings out of connection-string overrides", () => {
+    const options = getDatabasePoolOptions(
+      "postgresql://user:password@db.example.supabase.co:5432/postgres?sslmode=require&sslrootcert=ignored.crt",
+      {},
+    );
+    expect(options.connectionString).not.toContain("sslmode");
+    expect(options.connectionString).not.toContain("sslrootcert");
+    expect(options.ssl).toEqual({ rejectUnauthorized: true });
+  });
+
+  it("bounds runtime queries and accepts an explicit timeout", () => {
+    const url = "postgresql://feedy:feedy@localhost:5433/feedy?sslmode=disable";
+    expect(getDatabasePoolOptions(url, {}).query_timeout).toBe(15000);
+    expect(
+      getDatabasePoolOptions(url, { DATABASE_QUERY_TIMEOUT_SECONDS: "30" })
+        .query_timeout,
+    ).toBe(30000);
+    expect(() =>
+      getDatabasePoolOptions(url, { DATABASE_QUERY_TIMEOUT_SECONDS: "0" }),
+    ).toThrow("DATABASE_QUERY_TIMEOUT_SECONDS must be a positive integer.");
   });
 
   it("isolates deployments in a validated PostgreSQL schema", () => {

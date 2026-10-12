@@ -2,7 +2,7 @@ import { loadEnvConfig } from "@next/env";
 
 loadEnvConfig(process.cwd());
 async function main() {
-  const { getSqlClient } = await import("../src/lib/database/client");
+  const { getDatabasePool } = await import("../src/lib/database/client");
   const { getPhotoStorage } = await import("../src/lib/storage");
   const { cleanupPhotos } = await import("../src/lib/storage/cleanup");
   const { findOrphanPhotoKeys } = await import("../src/lib/storage/reconcile");
@@ -20,7 +20,7 @@ async function main() {
     console.log(`${pending} operation(s) remain queued for retry.`);
     if (pending) process.exitCode = 1;
   } finally {
-    await getSqlClient().end();
+    await getDatabasePool().end();
   }
 }
 main().catch((error) => {
