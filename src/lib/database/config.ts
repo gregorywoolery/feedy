@@ -248,6 +248,11 @@ export function getDatabaseConnectionOptions(
   environment: DatabaseEnvironment = process.env,
 ): DatabaseConnectionOptions {
   validateDatabaseUrl(databaseUrl, "Database URL");
+  const ssl = resolveSslMode(databaseUrl);
+  const certificate = readNonEmpty(environment, "DATABASE_CA_CERT");
+  if (certificate && !ssl) {
+    throw new Error("DATABASE_CA_CERT requires sslmode=verify-full.");
+  }
 
   return {
     max: readPositiveInteger(environment, "DATABASE_POOL_SIZE", 10),
@@ -267,7 +272,13 @@ export function getDatabaseConnectionOptions(
       1_800,
     ),
     prepare: false,
-    ssl: resolveSslMode(databaseUrl),
+    ssl: certificate
+      ? {
+          ca: certificate.replaceAll("\\n", "\n"),
+          rejectUnauthorized: true,
+          host: new URL(databaseUrl).hostname,
+        }
+      : ssl,
     connection: {
       application_name: "feedy",
       search_path: [getDatabaseSchema(environment), "public"]

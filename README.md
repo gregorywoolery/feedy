@@ -83,10 +83,11 @@ The application reads one canonical PostgreSQL URL. Direct URL precedence is `DA
 | `DATABASE_URL`                                                       | PostgreSQL URL for host development and deployed app processes                    | Required outside tests unless another accepted database variable is set       |
 | `DOCKER_DATABASE_URL`                                                | Database URL injected into the app container                                      | Defaults to the bundled `db` service; set this for external/Supabase Postgres |
 | `DATABASE_SCHEMA`                                                    | PostgreSQL schema for application tables                                          | `public`; use `feedy` to isolate tables in a shared database                  |
+| `DATABASE_CA_CERT`                                                   | PEM root certificate downloaded from the database provider                        | Optional; required when the provider CA is not in Node's trust store          |
 | `STORAGE_DRIVER`                                                     | Photo storage adapter                                                             | `local` for persistent disk or `database` for PostgreSQL-backed bytes         |
 | `UPLOAD_DIR`                                                         | Directory for photo bytes                                                         | `./data/uploads` on the host; `/app/data/uploads` in Docker                   |
 | `STORAGE_URL`                                                        | Optional external storage base URL retained for future object-storage integration | Not used by the current local/database adapters                               |
-| `DATABASE_POOL_SIZE`                                                 | Maximum PostgreSQL connections per client                                         | `10`; use `1` for the transient Vercel/Supabase clients                       |
+| `DATABASE_POOL_SIZE`                                                 | Maximum PostgreSQL connections per warm runtime                                   | `10`; use `1` for Vercel/Supabase deployments                                 |
 | `DATABASE_MAX_LIFETIME_SECONDS`                                      | Maximum lifetime of a PostgreSQL client connection                                | `1800`; use a short value such as `15` on serverless deployments              |
 | `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_PORT` | Bundled PostgreSQL service                                                        | `feedy`, `feedy`, `feedy`, `5433`                                             |
 | `APP_PORT`                                                           | Host port for the app container                                                   | `3000`                                                                        |
@@ -107,7 +108,7 @@ See [.env.example](.env.example) for the complete set, including split Supabase 
 
 Docker publishes the app and database on `127.0.0.1` only. This release has no sign-in: keep it in a trusted local environment. If a reverse proxy changes the public origin, set `APP_ORIGIN` to the exact browser origin (scheme, host and optional port).
 
-External database connections use certificate-verified TLS. Legacy `sslmode=require`, `allow` and `prefer` URLs are upgraded to `verify-full`; local `sslmode=disable` remains available. If your provider requires a custom CA, supply it using Node's `NODE_EXTRA_CA_CERTS` configuration.
+External database connections use certificate-verified TLS. Legacy `sslmode=require`, `allow` and `prefer` URLs are upgraded to `verify-full`; local `sslmode=disable` remains available. If your provider requires a custom CA, set `DATABASE_CA_CERT` to the PEM certificate downloaded from the provider. Certificate and hostname verification remain enabled. Node's `NODE_EXTRA_CA_CERTS` configuration is also supported on hosts where you can supply a certificate file.
 
 PDF exports allow up to 100 selected or 500 filtered records, with at most 100 photos and 50 MiB of stored image bytes. One export runs per application process at a time.
 

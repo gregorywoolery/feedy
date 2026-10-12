@@ -144,6 +144,15 @@ describe("database configuration", () => {
     ).toThrow(/DATABASE_MAX_LIFETIME_SECONDS must be a positive integer/);
   });
 
+  it("rejects a custom certificate when TLS is disabled", () => {
+    expect(() =>
+      getDatabaseConnectionOptions(
+        "postgresql://feedy:feedy@localhost:5433/feedy?sslmode=disable",
+        { DATABASE_CA_CERT: "certificate" },
+      ),
+    ).toThrow("DATABASE_CA_CERT requires sslmode=verify-full.");
+  });
+
   it("isolates deployments in a validated PostgreSQL schema", () => {
     expect(getDatabaseSchema({})).toBe("public");
     expect(getDatabaseSchema({ DATABASE_SCHEMA: "feedy" })).toBe("feedy");

@@ -22,7 +22,15 @@ DOCKER_DATABASE_URL=postgresql://USER:PASSWORD@HOST:5432/postgres?sslmode=verify
 
 Compose passes this value into the app as its canonical `DATABASE_URL`. The bundled local PostgreSQL container may still start for its health-gated Compose dependency, but the app and migration command use the external URL.
 
-Supabase hosts require `sslmode=verify-full` or `sslmode=verify-full`. The configuration resolver rejects a Supabase URL without a required TLS mode.
+Supabase hosts require `sslmode=verify-full`. Legacy `sslmode=require` URLs are accepted and upgraded to verified TLS.
+
+Supabase uses its own certificate authority. Download the CA certificate from **Database → Settings → SSL configuration** in the Supabase dashboard, then set `DATABASE_CA_CERT` to the certificate's PEM contents. On Vercel, read the certificate file into the production environment variable:
+
+```bash
+vercel env add DATABASE_CA_CERT production < prod-ca-2021.crt
+```
+
+Redeploy after changing environment variables. This supplies the trusted CA while retaining certificate and hostname verification. The certificate is public data; database passwords and connection URLs remain private.
 
 ## Alternative: split Supabase values
 
@@ -63,7 +71,7 @@ The seed upserts fixed UUIDs and is repeatable. Avoid it if those example record
 
 ## Connection behavior
 
-The client reads SSL from the URL, disables prepared statements, and uses a default pool size of 10. That makes the same code path usable with local PostgreSQL and pooled Supabase connections. On Vercel, Feedy creates a transient Postgres.js client for each query or transaction so an abandoned streamed response cannot leave a half-consumed socket in a reusable module-level pool. Use `DATABASE_POOL_SIZE=1` for those transient clients. Long-lived local and Docker runtimes retain one reusable client pool. Tune `DATABASE_IDLE_TIMEOUT_SECONDS` and `DATABASE_CONNECT_TIMEOUT_SECONDS` as needed. Set `DATABASE_MAX_LIFETIME_SECONDS=15` on Vercel as an additional bound on transaction-pool sockets.
+The client reads SSL from the URL, disables prepared statements, and uses a default pool size of 10. Local, Docker and Vercel runtimes reuse one bounded Postgres.js pool per warm process. On Vercel, use `DATABASE_POOL_SIZE=1` to avoid opening many independent sockets against Supabase's shared transaction pooler. Tune `DATABASE_IDLE_TIMEOUT_SECONDS` and `DATABASE_CONNECT_TIMEOUT_SECONDS` as needed. Set `DATABASE_MAX_LIFETIME_SECONDS=15` on Vercel as an additional bound on transaction-pool sockets.
 
 Application SQL schema-qualifies every table (for example, `feedy.projects`) and sends no session startup parameters instead of depending on a session `search_path`. This is important with transaction pooling because upstream PostgreSQL sessions can be reused between clients. Migration and seed commands still establish the target search path while applying unqualified checked-in SQL.
 
